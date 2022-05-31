@@ -7,22 +7,23 @@ from src.models.tresnet.layers.anti_aliasing import AntiAliasDownsampleLayer
 from .layers.avg_pool import FastGlobalAvgPool2d
 from .layers.squeeze_and_excite import SEModule
 from src.models.tresnet.layers.space_to_depth import SpaceToDepthModule
-from inplace_abn import InPlaceABN
 
 
-def IABN2Float(module: nn.Module) -> nn.Module:
-    "If `module` is IABN don't use half precision."
-    if isinstance(module, InPlaceABN):
-        module.float()
-    for child in module.children(): IABN2Float(child)
-    return module
+# def IABN2Float(module: nn.Module) -> nn.Module:
+#     "If `module` is IABN don't use half precision."
+#     if isinstance(module, InPlaceABN):
+#         module.float()
+#     for child in module.children(): IABN2Float(child)
+#     return module
 
 
 def conv2d_ABN(ni, nf, stride, activation="leaky_relu", kernel_size=3, activation_param=1e-2, groups=1):
     return nn.Sequential(
         nn.Conv2d(ni, nf, kernel_size=kernel_size, stride=stride, padding=kernel_size // 2, groups=groups,
                   bias=False),
-        InPlaceABN(num_features=nf, activation=activation, activation_param=activation_param)
+        nn.BatchNorm2d(num_features=nf),
+        nn.LeakyReLU(negative_slope=activation_param)
+        # InPlaceABN(num_features=nf, activation=activation, activation_param=activation_param)
     )
 
 
@@ -113,7 +114,7 @@ class Bottleneck(nn.Module):
 
 class TResNet(nn.Module):
 
-    def __init__(self, layers, in_chans=3, num_classes=1000, width_factor=1.0, remove_aa_jit=False):
+    def __init__(self, layers, in_chans=3, num_classes=80, width_factor=1.0, remove_aa_jit=False):
         super(TResNet, self).__init__()
 
         # JIT layers
@@ -154,7 +155,7 @@ class TResNet(nn.Module):
         for m in self.modules():
             if isinstance(m, nn.Conv2d):
                 nn.init.kaiming_normal_(m.weight, mode='fan_out', nonlinearity='leaky_relu')
-            elif isinstance(m, nn.BatchNorm2d) or isinstance(m, InPlaceABN):
+            elif isinstance(m, nn.BatchNorm2d):
                 nn.init.constant_(m.weight, 1)
                 nn.init.constant_(m.bias, 0)
 
