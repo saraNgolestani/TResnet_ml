@@ -1,12 +1,11 @@
 import torch
-from src.helper_functions.helper_functions import validate, create_dataloader
 from src.models import create_model
 import argparse
 import torch.nn as nn
 import time
 from datetime import datetime
 import copy
-import torch.nn.functional as F
+import numpy as np
 import tqdm
 from src.models.utils.score_utils import Statistics, compute_scores
 from src.models.utils.dataset_utils import get_dataloaders
@@ -33,7 +32,6 @@ def train_model(model, dataloaders, criterion, optimizer, scheduler, device,  nu
     since = time.time()
     best_model_wts = copy.deepcopy(model.state_dict())
     best_precision = 0.0
-    global_step = 0
     save_path = 'model/Tresnet_M_single_imagenet.pt'
     TH = 0.5
 
@@ -56,40 +54,37 @@ def train_model(model, dataloaders, criterion, optimizer, scheduler, device,  nu
             # Iterate over data.
             # temp_sigmoid = F.sigmoid
             for inputs, labels in pbar:
-                global_step += 1
-                if (global_step%1) == 0:
-                    inputs = inputs.to(device, dtype=torch.float)
-                    labels = labels.to(device, dtype=torch.float)
+                inputs = inputs.to(device, dtype=torch.float)
+                labels = labels.to(device, dtype=torch.float)
+                # forward
+                # track history if only in train
+                with torch.set_grad_enabled(phase == 'train'):
+                    with torch.cuda.amp.autocast(enabled=(scaler is not None)):
+                        predictions = model(inputs)
+                        pred_loss = criterion(predictions, labels)
+                        loss = pred_loss
+                        # backward + optimize only if in training phase
+                    if phase == 'train':
+                        if scaler is not None:
+                            scaler.scale(loss).backward()
+                            scaler.step(optimizer)
+                            scaler.update()
+                        else:
+                            loss.backward()
+                            optimizer.step()
+                        optimizer.zero_grad()
 
-                    # forward
-                    # track history if only in train
-                    with torch.set_grad_enabled(phase == 'train'):
-                        with torch.cuda.amp.autocast(enabled=(scaler is not None)):
-                            predictions = model(inputs)
-                            pred_loss = criterion(predictions, labels)
-                            loss = pred_loss
-                            # backward + optimize only if in training phase
-                        if phase == 'train':
-                            if scaler is not None:
-                                scaler.scale(loss).backward()
-                                scaler.step(optimizer)
-                                scaler.update()
-                            else:
-                                loss.backward()
-                                optimizer.step()
-                            optimizer.zero_grad()
+                preds = (predictions.detach() >= TH)
+                # statistics
+                current_loss = loss.item() * inputs.size(0)
+                running_loss += current_loss
+                scores = compute_scores(preds.cpu(), labels.cpu())
+                cum_stats.update(float(current_loss), *scores)
 
-                    preds = (predictions.detach() >= TH)
-                    # statistics
-                    current_loss = loss.item() * inputs.size(0)
-                    running_loss += current_loss
-                    scores = compute_scores(preds.cpu(), labels.cpu())
-                    cum_stats.update(float(current_loss), *scores)
+                running_step += 1
 
-                    running_step += 1
-
-                    pbar.set_description(f'phase:{phase}\t L:{cum_stats.loss(): .4f}\t'
-                                         f'A:{cum_stats.precision(): .3f}\t F1:{cum_stats.f1(): .4f}%')
+                pbar.set_description(f'phase:{phase}\t L:{cum_stats.loss(): .4f}\t'
+                                     f'A:{cum_stats.precision(): .3f}\t F1:{cum_stats.f1(): .4f}%')
 
             if phase == 'val' and cum_stats.precision() > best_precision:
                 best_precision = cum_stats.precision()

@@ -14,6 +14,7 @@ import torch
 import os
 import tqdm
 from torchvision import transforms
+from pytorch_lightning.core.datamodule import LightningDataModule
 
 class CocoDetection(datasets.coco.CocoDetection):
     def __init__(self, root, annFile, transform=None, target_transform=None):
@@ -90,6 +91,62 @@ def get_dataloaders():
     dataset_sizes = {'train': len(train_dataset), 'val': len(val_dataset)}
 
     return dataloaders, dataset_sizes
+
+
+class COCODatasetLightning(LightningDataModule):
+    def __init__(self):
+        super().__init__()
+        self.workers = 2
+        self.num_classes = 80
+        self.image_size = 224
+        self.data_path = '/local/scratch1/makbn/sara/data'
+        self.batch_size = 128
+
+    def prepare_data(self):
+        pass
+
+    def setup(self, stage):
+        # COCO Data loading
+        instances_path_val = os.path.join(self.data_path, 'annotations/instances_val2014.json')
+        instances_path_train = os.path.join(self.data_path, 'annotations/instances_train2014.json')
+        data_path_val = f'{self.data_path}/val2014'  # args.data
+        data_path_train = f'{self.data_path}/train2014'  # args.data
+        self.train_dataset = CocoDetection(data_path_train,
+                                      instances_path_train,
+                                      transforms.Compose([
+                                          transforms.Resize((self.image_size, self.image_size)),
+                                          transforms.ToTensor(),
+                                          # normalize,
+                                      ]))
+        self.val_dataset = CocoDetection(data_path_val,
+                                           instances_path_train,
+                                           transforms.Compose([
+                                               transforms.Resize((self.image_size, self.image_size)),
+                                               transforms.ToTensor(),
+                                               # normalize,
+                                           ]))
+
+    def train_dataloader(self):
+        train_dl = torch.utils.data.DataLoader(
+            self.train_dataset, batch_size=self.batch_size, shuffle=True,
+            num_workers=self.workers, pin_memory=True, drop_last=True)
+        return train_dl
+
+    def val_dataloader(self):
+        val_dl = torch.utils.data.DataLoader(
+            self.val_dataset, batch_size=self.batch_size, shuffle=False,
+            num_workers=self.workers, pin_memory=False, drop_last=True)
+        return val_dl
+
+
+
+
+
+
+
+
+
+
 
 
 
