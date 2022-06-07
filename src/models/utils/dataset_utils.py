@@ -99,7 +99,7 @@ class COCODatasetLightning(LightningDataModule):
         self.workers = 2
         self.num_classes = 80
         self.image_size = 224
-        self.data_path = '/local/scratch1/makbn/sara/data'
+        self.data_path = '/home/sara.naserigolestani/hydra-tresnet/data/coco'
         self.batch_size = 128
 
         instances_path_val = os.path.join(self.data_path, 'annotations/instances_val2014.json')
@@ -127,13 +127,13 @@ class COCODatasetLightning(LightningDataModule):
     def train_dataloader(self):
         train_dl = torch.utils.data.DataLoader(
             self.train_dataset, batch_size=self.batch_size, shuffle=True,
-            num_workers=self.workers, pin_memory=True, drop_last=True)
+            pin_memory=True, drop_last=True)
         return train_dl
 
     def val_dataloader(self):
         val_dl = torch.utils.data.DataLoader(
             self.val_dataset, batch_size=self.batch_size, shuffle=False,
-            num_workers=self.workers, pin_memory=False, drop_last=True)
+            pin_memory=False, drop_last=True)
         return val_dl
 
 

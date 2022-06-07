@@ -10,7 +10,7 @@ from src.models.tresnet.layers.space_to_depth import SpaceToDepthModule
 import pytorch_lightning as ptl
 from src.models.utils.score_utils import compute_scores, Statistics
 import torch.nn.functional as F
-
+import wandb
 
 class BasicBlock(nn.Module):
     expansion = 1
@@ -123,7 +123,7 @@ class Bottleneck(nn.Module):
 
 
 class Tresnet_lightning(ptl.LightningModule):
-    def __init__(self, layers, in_chans=3, num_classes=80, width_factor=1.0, remove_aa_jit=False):
+    def __init__(self, layers, in_chans=3, num_classes=80, width_factor=1.0, remove_aa_jit=True):
         super(Tresnet_lightning, self).__init__()
 
         # JIT layers
@@ -229,10 +229,13 @@ class Tresnet_lightning(ptl.LightningModule):
         preds = (logits.detach() >= 0.5)
         scores = compute_scores(preds.cpu(), y.cpu())
         cum_stats.update(float(loss), *scores)
-        precision, _ = compute_scores(preds, y)
         self.log('train_acc', cum_stats.precision())
         self.log('train_loss', cum_stats.loss())
-        return loss
+        wandb.log({
+            'train acc': cum_stats.precision(),
+            'train loss': cum_stats.loss()
+        })
+        return cum_stats.loss()
 
     def validation_step(self, val_batch, batch_idx):
         cum_stats = Statistics()
@@ -244,7 +247,10 @@ class Tresnet_lightning(ptl.LightningModule):
         cum_stats.update(float(loss), *scores)
         self.log('val_acc', cum_stats.precision())
         self.log('val_loss', cum_stats.loss())
-
+        wandb.log({
+            'val acc': cum_stats.precision(),
+            'val loss': cum_stats.loss()
+        })
 
 
 def TResnetM(model_params):

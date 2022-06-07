@@ -18,7 +18,7 @@ class AntiAliasDownsampleLayer(nn.Module):
         return self.op(x)
 
 
-@torch.jit.script
+#@torch.jit.script
 class DownsampleJIT(object):
     def __init__(self, filt_size: int = 3, stride: int = 2, channels: int = 0):
         self.stride = stride
