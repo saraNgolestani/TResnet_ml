@@ -35,9 +35,7 @@ def run():
 
 
 if __name__ == '__main__':
-    run()
     args = parser.parse_args()
-    model = create_model(args)
     wandb.init(project="mgpu_tresnet", entity="sara_ngln")
     wandb.config = {
         "val_zoom_factor": args.val_zoom_factor,
@@ -46,6 +44,8 @@ if __name__ == '__main__':
         "num_nodes": args.num_epochs,
     }
 
+    run()
+    model = create_model(args)
     trainer = pl.Trainer(callbacks=[checkpoint_callback], max_epochs=100, num_nodes=1, gpus=2, )
     train_dl = COCODatasetLightning().train_dataloader()
     val_dl = COCODatasetLightning().val_dataloader()
