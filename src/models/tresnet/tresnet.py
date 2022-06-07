@@ -227,14 +227,11 @@ class Tresnet_lightning(ptl.LightningModule):
         logits = self.forward(x)
         loss = self.bcewithlogits_loss(logits, y.float())
         preds = (logits.detach() >= 0.5)
+        current_loss = loss.item() * x.size(0)
         scores = compute_scores(preds.cpu(), y.cpu())
-        cum_stats.update(float(loss), *scores)
+        cum_stats.update(float(current_loss), *scores)
         self.log('train acc', cum_stats.precision())
         self.log('train loss', cum_stats.loss())
-       # wandb.log({
-       #    'train acc': cum_stats.precision(),
-       #     'train loss': cum_stats.loss()
-       #})
         return loss
 
     def validation_step(self, val_batch, batch_idx):
@@ -247,10 +244,6 @@ class Tresnet_lightning(ptl.LightningModule):
         cum_stats.update(float(loss), *scores)
         self.log('val acc', cum_stats.precision())
         self.log('val loss', cum_stats.loss())
-        #wandb.log({
-        #    'val acc': cum_stats.precision(),
-        #    'val loss': cum_stats.loss()
-        #})
 
 
 def TResnetM(model_params):
