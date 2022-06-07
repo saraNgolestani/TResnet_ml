@@ -235,7 +235,7 @@ class Tresnet_lightning(ptl.LightningModule):
        #    'train acc': cum_stats.precision(),
        #     'train loss': cum_stats.loss()
        #})
-        return torch.as_tensor(cum_stats.loss())
+        return loss
 
     def validation_step(self, val_batch, batch_idx):
         cum_stats = Statistics()
