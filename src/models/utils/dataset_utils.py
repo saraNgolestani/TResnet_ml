@@ -102,11 +102,6 @@ class COCODatasetLightning(LightningDataModule):
         self.data_path = '/local/scratch1/makbn/sara/data'
         self.batch_size = 128
 
-    def prepare_data(self):
-        pass
-
-    def setup(self, stage):
-        # COCO Data loading
         instances_path_val = os.path.join(self.data_path, 'annotations/instances_val2014.json')
         instances_path_train = os.path.join(self.data_path, 'annotations/instances_train2014.json')
         data_path_val = f'{self.data_path}/val2014'  # args.data
@@ -119,12 +114,15 @@ class COCODatasetLightning(LightningDataModule):
                                           # normalize,
                                       ]))
         self.val_dataset = CocoDetection(data_path_val,
-                                           instances_path_train,
+                                           instances_path_val,
                                            transforms.Compose([
                                                transforms.Resize((self.image_size, self.image_size)),
                                                transforms.ToTensor(),
                                                # normalize,
                                            ]))
+
+    def prepare_data(self):
+        pass
 
     def train_dataloader(self):
         train_dl = torch.utils.data.DataLoader(

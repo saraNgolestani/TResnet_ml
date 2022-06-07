@@ -4,6 +4,7 @@ import argparse
 from src.models.utils.dataset_utils import COCODatasetLightning
 from pytorch_lightning.callbacks import ModelCheckpoint
 import pytorch_lightning as pl
+import torch
 
 
 # torch.backends.cudnn.benchmark = True
@@ -26,12 +27,21 @@ checkpoint_callback = ModelCheckpoint(
     save_top_k=2,
     mode='max'
 )
-args = parser.parse_args()
-model = create_model(args)
-trainer = pl.Trainer(callbacks=[checkpoint_callback], max_epochs=100, num_nodes=1, gpus=4, accelerator='ddp', )
-train_dl = COCODatasetLightning().train_dataloader()
-val_dl = COCODatasetLightning().val_dataloader()
-trainer.fit(model, train_dl, val_dl)
+
+
+def run():
+    torch.multiprocessing.freeze_support()
+    print('loop')
+
+
+if __name__ == '__main__':
+    run()
+    args = parser.parse_args()
+    model = create_model(args)
+    trainer = pl.Trainer(callbacks=[checkpoint_callback], max_epochs=100, num_nodes=1, gpus=4, accelerator='ddp', )
+    train_dl = COCODatasetLightning().train_dataloader()
+    val_dl = COCODatasetLightning().val_dataloader()
+    trainer.fit(model, train_dl, val_dl)
 
 
 

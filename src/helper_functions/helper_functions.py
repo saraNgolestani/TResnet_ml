@@ -58,8 +58,8 @@ def validate(model, val_loader):
     with torch.no_grad():
         for batch_idx, (input, target) in enumerate(val_loader):
             last_batch = batch_idx == last_idx
-            input = input.cuda()
-            target = target.cuda()
+            input = input
+            target = target
             output = model(input)
 
             prec1 = accuracy(output, target)
