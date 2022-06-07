@@ -23,7 +23,7 @@ parser.add_argument('--num_workers', type=int, default=2)
 parser.add_argument('--remove_aa_jit', action='store_true', default=True)
 
 checkpoint_callback = ModelCheckpoint(
-    monitor='val_acc',
+    monitor='val acc',
     dirpath='saved_models',
     filename='model-{epoch:03d}-{val_acc:.2f}',
     save_top_k=2,
