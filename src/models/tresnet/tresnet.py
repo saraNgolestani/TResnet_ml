@@ -242,10 +242,14 @@ class Tresnet_lightning(ptl.LightningModule):
         preds = (logits.detach() >= 0.5)
         current_loss = loss.item() * x.size(0)
         scores = compute_scores(preds.cpu(), y.cpu())
-        cum_stats.update(float(current_loss), *scores)
+        self.val_stats = cum_stats.update(float(current_loss), *scores)
         self.log('val acc', cum_stats.precision(), on_step=False, on_epoch=True)
         self.log('val loss', cum_stats.loss(), on_step=False, on_epoch=True)
-        return cum_stats.precision()
+        return cum_stats
+
+    def validation_epoch_end(self, outputs):
+        self.log('val acc on epoch', outputs.precision())
+        self.log('val loss on epoch', outputs.loss())
 
 
 def TResnetM(model_params):

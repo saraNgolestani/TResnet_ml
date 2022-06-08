@@ -132,8 +132,8 @@ class COCODatasetLightning(LightningDataModule):
 
     def val_dataloader(self):
         val_dl = torch.utils.data.DataLoader(
-            self.val_dataset, batch_size=self.batch_size, shuffle=False,
-            pin_memory=False, drop_last=True)
+            self.val_dataset, batch_size=self.batch_size, shuffle=True,
+            pin_memory=True, drop_last=True)
         return val_dl
 
 
