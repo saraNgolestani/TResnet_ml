@@ -8,6 +8,8 @@ from pytorch_lightning.loggers import WandbLogger
 import pytorch_lightning as pl
 import torch
 import wandb
+import warnings
+warnings.filterwarnings('always')
 
 # torch.backends.cudnn.benchmark = True
 parser = argparse.ArgumentParser(description='PyTorch TResNet ImageNet Inference')
