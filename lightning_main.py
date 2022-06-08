@@ -23,6 +23,7 @@ parser.add_argument('--batch_size', type=int, default=48)
 parser.add_argument('--num_epochs', type=int, default=150)
 parser.add_argument('--num_workers', type=int, default=2)
 parser.add_argument('--remove_aa_jit', action='store_true', default=True)
+parser.add_argument('--wandb_name', default='mgpu_tresnet')
 
 checkpoint_callback = ModelCheckpoint(
     monitor='val acc',
@@ -40,7 +41,7 @@ def run():
 
 if __name__ == '__main__':
     args = parser.parse_args()
-    wandb_logger = WandbLogger(project="sgpu_tresnet", entity="sara_ngln")
+    wandb_logger = WandbLogger(project=args.wandb_name, entity="sara_ngln")
     wandb_logger.experiment.config.update({
         "val_zoom_factor": args.val_zoom_factor,
         "batch_size": args.batch_size,
