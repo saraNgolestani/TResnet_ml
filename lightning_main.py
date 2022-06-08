@@ -41,7 +41,6 @@ def run():
 if __name__ == '__main__':
     args = parser.parse_args()
     wandb_logger = WandbLogger(project="sgpu_tresnet", entity="sara_ngln")
-    #wandb.init(project="mgpu_tresnet", entity="sara_ngln")
     wandb_logger.experiment.config.update({
         "val_zoom_factor": args.val_zoom_factor,
         "batch_size": args.batch_size,
@@ -51,7 +50,7 @@ if __name__ == '__main__':
 
     run()
     model = create_model(args)
-    trainer = pl.Trainer(logger=wandb_logger, callbacks=[checkpoint_callback], max_epochs=100, num_nodes=1, gpus=1, )
+    trainer = pl.Trainer(logger=wandb_logger, callbacks=[checkpoint_callback], max_epochs=100, num_nodes=1, gpus=2, )
     train_dl = COCODatasetLightning().train_dataloader()
     val_dl = COCODatasetLightning().val_dataloader()
     trainer.fit(model, train_dl, val_dl)

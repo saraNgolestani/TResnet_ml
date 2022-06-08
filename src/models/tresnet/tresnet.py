@@ -245,6 +245,7 @@ class Tresnet_lightning(ptl.LightningModule):
         cum_stats.update(float(current_loss), *scores)
         self.log('val acc', cum_stats.precision(), on_step=False, on_epoch=True)
         self.log('val loss', cum_stats.loss(), on_step=False, on_epoch=True)
+        return cum_stats.precision()
 
 
 def TResnetM(model_params):
