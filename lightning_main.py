@@ -40,7 +40,7 @@ def run():
 
 if __name__ == '__main__':
     args = parser.parse_args()
-    wandb_logger = WandbLogger(project="mgpu_tresnet", entity="sara_ngln")
+    wandb_logger = WandbLogger(project="sgpu_tresnet", entity="sara_ngln")
     #wandb.init(project="mgpu_tresnet", entity="sara_ngln")
     wandb_logger.experiment.config.update({
         "val_zoom_factor": args.val_zoom_factor,
