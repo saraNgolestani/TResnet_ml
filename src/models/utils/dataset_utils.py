@@ -100,7 +100,7 @@ class COCODatasetLightning(LightningDataModule):
         self.num_classes = 80
         self.image_size = 224
         self.data_path = '/home/sara.naserigolestani/hydra-tresnet/data/coco'
-        self.batch_size = 128
+        self.batch_size = 64
 
         instances_path_val = os.path.join(self.data_path, 'annotations/instances_val2014.json')
         instances_path_train = os.path.join(self.data_path, 'annotations/instances_train2014.json')
