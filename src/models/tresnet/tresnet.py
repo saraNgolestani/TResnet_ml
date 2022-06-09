@@ -222,17 +222,21 @@ class Tresnet_lightning(ptl.LightningModule):
         return step_lr_scheduler
 
     def training_step(self, train_batch, batch_idx):
-        cum_stats = Statistics()
+        self.train_stats = Statistics()
         x, y = train_batch
         logits = self.forward(x)
         loss = self.bcewithlogits_loss(logits, y.float())
         preds = (logits.detach() >= 0.45)
         current_loss = loss.item() * x.size(0)
         scores = compute_scores(preds.cpu(), y.cpu())
-        cum_stats.update(float(current_loss), *scores)
-        self.log('train acc', cum_stats.precision())
-        self.log('train loss', cum_stats.loss())
+        self.train_stats.update(float(current_loss), *scores)
+        self.log('train acc', self.train_stats.precision())
+        self.log('train loss', self.train_stats.loss())
         return loss
+
+    def training_epoch_end(self, outputs):
+        self.log('train acc on epoch', self.train_stats.precision())
+        self.log('train loss on epoch', self.train_stats.loss())
 
     def validation_step(self, val_batch, batch_idx):
         self.val_stats = Statistics()
