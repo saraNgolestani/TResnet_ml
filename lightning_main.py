@@ -26,7 +26,7 @@ parser.add_argument('--remove_aa_jit', action='store_true', default=True)
 parser.add_argument('--wandb_name', default='mgpu_tresnet')
 
 checkpoint_callback = ModelCheckpoint(
-    monitor='val acc',
+    monitor='val acc on epoch',
     dirpath='saved_models',
     filename='model-{epoch:03d}-{val_acc:.2f}',
     save_top_k=2,
