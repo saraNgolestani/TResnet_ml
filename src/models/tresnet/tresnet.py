@@ -210,7 +210,7 @@ class Tresnet_lightning(ptl.LightningModule):
         return logits
 
     def bcewithlogits_loss(self, logits, labels):
-        return F.binary_cross_entropy_with_logits(logits, labels)
+        return F.binary_cross_entropy(logits, labels)
 
     def configure_optimizers(self):
         optimizer = torch.optim.AdamW(self.parameters(), lr=5e-4)
@@ -226,7 +226,7 @@ class Tresnet_lightning(ptl.LightningModule):
         x, y = train_batch
         logits = self.forward(x)
         loss = self.bcewithlogits_loss(logits, y.float())
-        preds = (logits.detach() >= 0.5)
+        preds = (logits.detach() >= 0.45)
         current_loss = loss.item() * x.size(0)
         scores = compute_scores(preds.cpu(), y.cpu())
         cum_stats.update(float(current_loss), *scores)
@@ -239,7 +239,7 @@ class Tresnet_lightning(ptl.LightningModule):
         x, y = val_batch
         logits = self.forward(x)
         loss = self.bcewithlogits_loss(logits, y.float())
-        preds = (logits.detach() >= 0.5)
+        preds = (logits.detach() >= 0.45)
         current_loss = loss.item() * x.size(0)
         scores = compute_scores(preds.cpu(), y.cpu())
         self.val_stats.update(float(current_loss), *scores)
