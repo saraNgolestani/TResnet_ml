@@ -225,7 +225,7 @@ class Tresnet_lightning(ptl.LightningModule):
         self.train_stats = Statistics()
         x, y = train_batch
         logits = self.forward(x)
-        loss = self.bcewithlogits_loss(logits, y.float())
+        loss = self.bcewithlogits_loss(logits, y.long())
         preds = (logits.detach() >= 0.45)
         current_loss = loss.item() * x.size(0)
         scores = compute_scores(preds.cpu(), y.cpu())
@@ -242,7 +242,7 @@ class Tresnet_lightning(ptl.LightningModule):
         self.val_stats = Statistics()
         x, y = val_batch
         logits = self.forward(x)
-        loss = self.bcewithlogits_loss(logits, y.float())
+        loss = self.bcewithlogits_loss(logits, y.long())
         preds = (logits.detach() >= 0.45)
         current_loss = loss.item() * x.size(0)
         scores = compute_scores(preds.cpu(), y.cpu())
