@@ -219,6 +219,7 @@ class Tresnet_lightning(ptl.LightningModule):
     def lr_schedulers(self):
         optimizer = self.configure_optimizers()
         step_lr_scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=10, gamma=0.9)
+        self.log('learning rate:', step_lr_scheduler.get_lr())
         return step_lr_scheduler
 
     def training_step(self, train_batch, batch_idx):
