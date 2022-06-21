@@ -23,7 +23,7 @@ parser.add_argument('--batch_size', type=int, default=48)
 parser.add_argument('--num_epochs', type=int, default=100)
 parser.add_argument('--num_workers', type=int, default=2)
 parser.add_argument('--remove_aa_jit', action='store_true', default=True)
-parser.add_argument('--wandb_name', default='mgpu_tresnet')
+parser.add_argument('--wandb_name', default='lr_monitor_tresnet_mgpu')
 
 checkpoint_callback = ModelCheckpoint(
     monitor='val acc on epoch',
