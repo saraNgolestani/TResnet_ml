@@ -9,8 +9,8 @@ import pytorch_lightning as pl
 import torch
 import wandb
 import warnings
+from pytorch_lightning.callbacks import LearningRateMonitor
 warnings.filterwarnings('always')
-
 # torch.backends.cudnn.benchmark = True
 parser = argparse.ArgumentParser(description='PyTorch TResNet ImageNet Inference')
 parser.add_argument('--val_dir')
@@ -34,6 +34,8 @@ checkpoint_callback = ModelCheckpoint(
 )
 
 
+
+
 def run():
     torch.multiprocessing.freeze_support()
     print('loop')
@@ -41,7 +43,9 @@ def run():
 
 if __name__ == '__main__':
     args = parser.parse_args()
+    lr_monitor = LearningRateMonitor(logging_interval='step')
     wandb_logger = WandbLogger(project=args.wandb_name, entity="sara_ngln")
+
     wandb_logger.experiment.config.update({
         "val_zoom_factor": args.val_zoom_factor,
         "batch_size": args.batch_size,
@@ -51,7 +55,7 @@ if __name__ == '__main__':
 
     run()
     model = create_model(args)
-    trainer = pl.Trainer(logger=wandb_logger, callbacks=[checkpoint_callback], max_epochs=100, num_nodes=1, gpus=2, )
+    trainer = pl.Trainer(logger=wandb_logger, callbacks=[checkpoint_callback, lr_monitor], max_epochs=100, num_nodes=1, gpus=2)
     train_dl = COCODatasetLightning().train_dataloader()
     val_dl = COCODatasetLightning().val_dataloader()
     trainer.fit(model, train_dl, val_dl)

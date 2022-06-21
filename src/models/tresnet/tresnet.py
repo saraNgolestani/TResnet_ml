@@ -230,7 +230,6 @@ class Tresnet_lightning(ptl.LightningModule):
         current_loss = loss.item() * x.size(0)
         scores = compute_scores(preds.cpu(), y.cpu())
         self.train_stats.update(float(current_loss), *scores)
-        self.log('learning rate:', self.lr_schedulers().get_lr()[0])
         self.log('train acc', self.train_stats.precision())
         self.log('train loss', self.train_stats.loss())
         return loss
