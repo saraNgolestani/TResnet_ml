@@ -213,7 +213,7 @@ class Tresnet_lightning(ptl.LightningModule):
         return F.binary_cross_entropy_with_logits(logits, labels)
 
     def configure_optimizers(self):
-        optimizer = torch.optim.AdamW(self.parameters(), lr=5e-4)
+        optimizer = torch.optim.AdamW(self.parameters(), lr=1e-3)
         return optimizer
 
     def lr_schedulers(self):
