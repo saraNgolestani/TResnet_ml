@@ -34,8 +34,6 @@ checkpoint_callback = ModelCheckpoint(
 )
 
 
-
-
 def run():
     torch.multiprocessing.freeze_support()
     print('loop')
