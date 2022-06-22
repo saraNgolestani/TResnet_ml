@@ -216,7 +216,7 @@ class Tresnet_lightning(ptl.LightningModule):
         optimizer = torch.optim.AdamW(self.parameters(), lr=5e-4)
         lr_scheduler = {'scheduler': torch.optim.lr_scheduler.StepLR(
             optimizer,
-            step_size=3500,
+            step_size=7000,
             gamma=0.9
         ),
             'name': 'learning_rate',
@@ -224,10 +224,6 @@ class Tresnet_lightning(ptl.LightningModule):
             'frequency': 1}
         return [optimizer], [lr_scheduler]
 
-    # def lr_schedulers(self):
-    #     optimizer = self.configure_optimizers()
-    #     step_lr_scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=10, gamma=0.9)
-    #     return step_lr_scheduler
 
     def training_step(self, train_batch, batch_idx):
         self.train_stats = Statistics()

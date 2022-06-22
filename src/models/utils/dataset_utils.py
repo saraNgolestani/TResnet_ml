@@ -16,6 +16,7 @@ import tqdm
 from torchvision import transforms
 from pytorch_lightning.core.datamodule import LightningDataModule
 
+
 class CocoDetection(datasets.coco.CocoDetection):
     def __init__(self, root, annFile, transform=None, target_transform=None):
         self.root = root

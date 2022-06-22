@@ -53,7 +53,8 @@ if __name__ == '__main__':
 
     run()
     model = create_model(args)
-    trainer = pl.Trainer(logger=wandb_logger, callbacks=[checkpoint_callback, lr_monitor], max_epochs=100, num_nodes=1, gpus=2, accelerator='gpu', devices=2)
+    trainer = pl.Trainer(logger=wandb_logger, callbacks=[checkpoint_callback, lr_monitor], max_epochs=100,
+                         num_nodes=1, gpus=2, accelerator='gpu', devices=2, auto_select_gpus=True)
     train_dl = COCODatasetLightning().train_dataloader()
     val_dl = COCODatasetLightning().val_dataloader()
     trainer.fit(model, train_dl, val_dl)
