@@ -15,6 +15,7 @@ import os
 import tqdm
 from torchvision import transforms
 from pytorch_lightning.core.datamodule import LightningDataModule
+import random
 
 
 class CocoDetection(datasets.coco.CocoDetection):
@@ -95,32 +96,22 @@ def get_dataloaders():
 
 
 class COCODatasetLightning(LightningDataModule):
-    def __init__(self):
+    def __init__(self, args):
         super().__init__()
         self.workers = 2
         self.num_classes = 80
-        self.image_size = 224
+        self.image_size = args.input_size
         self.data_path = '/home/sara.naserigolestani/hydra-tresnet/data/coco'
-        self.batch_size = 32
+        self.batch_size = args.batch_size
 
         instances_path_val = os.path.join(self.data_path, 'annotations/instances_val2014.json')
         instances_path_train = os.path.join(self.data_path, 'annotations/instances_train2014.json')
         data_path_val = f'{self.data_path}/val2014'  # args.data
         data_path_train = f'{self.data_path}/train2014'  # args.data
-        self.train_dataset = CocoDetection(data_path_train,
-                                      instances_path_train,
-                                      transforms.Compose([
-                                          transforms.Resize((self.image_size, self.image_size)),
-                                          transforms.ToTensor(),
-                                          # normalize,
-                                      ]))
-        self.val_dataset = CocoDetection(data_path_val,
-                                           instances_path_val,
-                                           transforms.Compose([
-                                               transforms.Resize((self.image_size, self.image_size)),
-                                               transforms.ToTensor(),
-                                               # normalize,
-                                           ]))
+        self.train_dataset = self.load_data_from_file(data_path=data_path_train, instances_path=instances_path_train,
+                                                      sampling_ratio=args.dataset_sampling_ratio, seed=args.seed)
+        self.val_dataset = self.load_data_from_file(data_path=data_path_val, instances_path=instances_path_val,
+                                                    sampling_ratio=args.dataset_sampling_ratio, seed=args.seed)
 
     def prepare_data(self):
         pass
@@ -133,9 +124,36 @@ class COCODatasetLightning(LightningDataModule):
 
     def val_dataloader(self):
         val_dl = torch.utils.data.DataLoader(
-            self.val_dataset, batch_size=self.batch_size, shuffle=True,
+            self.val_dataset, batch_size=self.batch_size,
             pin_memory=True, drop_last=True)
         return val_dl
+
+    def load_data_from_file(self, data_path, instances_path, sampling_ratio=1.0, seed=0):
+        if sampling_ratio == 1.0:
+            print(f'loading the whole dataset from: {data_path}')
+            return CocoDetection(data_path,
+                                 instances_path,
+                                 transforms.Compose([
+                                     transforms.Resize((self.image_size, self.image_size)),
+                                     transforms.ToTensor(),
+                                     # normalize,
+                                 ]))
+        else:
+            print(f'loading a subset(%{sampling_ratio * 100}) of dataset from: {data_path}')
+            whole_set = CocoDetection(data_path,
+                                      instances_path,
+                                      transforms.Compose([
+                                          transforms.Resize((self.image_size, self.image_size)),
+                                          transforms.ToTensor(),
+                                          # normalize,
+                                      ]))
+            subset_size = int(len(whole_set) * sampling_ratio)
+            random.seed(seed)
+            subset_indices = random.sample(list(range(len(whole_set))), subset_size)
+            subset = torch.utils.data.Subset(whole_set, subset_indices)
+            print(f'subset size: {len(subset)}')
+
+            return subset
 
 
 
