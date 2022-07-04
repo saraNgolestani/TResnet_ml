@@ -1,10 +1,4 @@
 from time import time
-import warnings
-
-warnings.simplefilter("ignore", UserWarning)
-warnings.filterwarnings('always')
-warnings.filterwarnings("ignore", category=DeprecationWarning)
-
 import numpy as np
 from sklearn.metrics import f1_score, precision_score
 
