@@ -8,7 +8,7 @@ from .layers.avg_pool import FastGlobalAvgPool2d
 from .layers.squeeze_and_excite import SEModule
 from src.models.tresnet.layers.space_to_depth import SpaceToDepthModule
 import pytorch_lightning as ptl
-from src.models.utils.score_utils import compute_scores, Statistics
+from src.models.utils.score_utils import compute_scores, Statistics, compute_scores_and_th
 import torch.nn.functional as F
 import wandb
 
@@ -123,8 +123,18 @@ class Bottleneck(nn.Module):
 
 
 class Tresnet_lightning(ptl.LightningModule):
-    def __init__(self, layers, in_chans=3, num_classes=80, width_factor=1.0, remove_aa_jit=True):
+    def __init__(self, layers, in_chans=3, num_classes=80, width_factor=1.0, remove_aa_jit=True, lr=5e-5):
         super(Tresnet_lightning, self).__init__()
+        self.best_th = 0.45
+        self.val_step_counter = 0
+        self.all_val_pred = []
+        self.all_val_actual = []
+        self.all_train_pred = []
+        self.all_train_actual = []
+        self.val_stats = Statistics()
+        self.train_stats = Statistics()
+        self.test_stats = Statistics()
+        self.lr = lr
 
         # JIT layers
         space_to_depth = SpaceToDepthModule()
@@ -213,7 +223,7 @@ class Tresnet_lightning(ptl.LightningModule):
         return F.binary_cross_entropy_with_logits(logits, labels)
 
     def configure_optimizers(self):
-        optimizer = torch.optim.AdamW(self.parameters(), lr=1e-3)
+        optimizer = torch.optim.AdamW(self.parameters(), lr=self.lr)
         lr_scheduler = {'scheduler': torch.optim.lr_scheduler.StepLR(
             optimizer,
             step_size=7000,
@@ -224,40 +234,82 @@ class Tresnet_lightning(ptl.LightningModule):
             'frequency': 1}
         return [optimizer], [lr_scheduler]
 
-
     def training_step(self, train_batch, batch_idx):
-        self.train_stats = Statistics()
         x, y = train_batch
         logits = self.forward(x)
         loss = self.bcewithlogits_loss(logits, y.float())
-        preds = (logits.detach() >= 0.45)
+        step_preds = logits.detach().cpu()
+        step_actuals = y.cpu()
+        #preds = (logits.detach() >= 0.45)
         current_loss = loss.item() * x.size(0)
-        scores = compute_scores(preds.cpu(), y.cpu())
-        self.train_stats.update(float(current_loss), *scores)
-        self.log('train acc', self.train_stats.precision())
+        scores, _ = compute_scores_and_th(step_preds, step_actuals, self.best_th)
+        self.all_train_pred.extend(step_preds.tolist())
+        self.all_train_actual.extend(step_actuals.tolist())
+        #scores = compute_scores(preds.cpu(), y.cpu())
+        self.train_stats.update(loss=float(current_loss), precision=scores)
+        self.log('train mAP', 100 * self.train_stats.precision())
         self.log('train loss', self.train_stats.loss())
         return loss
 
     def training_epoch_end(self, outputs):
-        self.log('train acc on epoch', self.train_stats.precision())
+        self.log('train mAP on epoch', 100 * self.train_stats.precision())
         self.log('train loss on epoch', self.train_stats.loss())
+        scores, self.best_th = compute_scores_and_th(self.all_train_pred, self.all_train_actual)
+        self.log('train mAP on epoch with best TH', 100 * (sum(scores) / len(scores)))
+
+        self.all_train_pred = []
+        self.all_train_actual = []
+        self.val_step_counter = 0
+        self.train_stats = Statistics()
+
+
 
     def validation_step(self, val_batch, batch_idx):
-        self.val_stats = Statistics()
         x, y = val_batch
         logits = self.forward(x)
         loss = self.bcewithlogits_loss(logits, y.float())
-        preds = (logits.detach() >= 0.45)
+        #preds = (logits.detach() >= 0.45)
         current_loss = loss.item() * x.size(0)
-        scores = compute_scores(preds.cpu(), y.cpu())
-        self.val_stats.update(float(current_loss), *scores)
-        # self.log('val acc', cum_stats.precision(), on_step=False, on_epoch=True)
-        # self.log('val loss', cum_stats.loss(), on_step=False, on_epoch=True)
+        step_preds = logits.detach().cpu()
+        step_actuals = y.cpu()
+        scores, _ = compute_scores_and_th(step_preds, step_actuals, self.best_th)
+
+        self.all_val_pred.extend(step_preds.tolist())
+        self.all_val_actual.extend(step_actuals.tolist())
+
+        #scores = compute_scores(preds.cpu(), y.cpu())
+        try:
+            for cls_name, cls_pre in zip(self.subclass_flat, scores):
+                self.cls_pre_dict[cls_name] = self.cls_pre_dict[cls_name] + cls_pre
+            self.val_step_counter += 1
+        except:
+            pass
+        self.val_stats.update(loss=float(current_loss), precision=scores, best_th=self.best_th)
         return loss
 
     def validation_epoch_end(self, outputs):
-        self.log('val acc on epoch', self.val_stats.precision())
+
+        self.log('val mAP on epoch', 100 * self.val_stats.precision())
         self.log('val loss on epoch', self.val_stats.loss())
+        self.log('val best TH on epoch', self.best_th)
+
+        try:
+            for k, v in self.cls_pre_dict.items():
+                self.cls_pre_dict[k] = self.cls_pre_dict[k] / self.val_step_counter
+            self.log('val AP per class', self.cls_pre_dict)
+            # reset all precisions
+            for k, v in self.cls_pre_dict.items():
+                self.cls_pre_dict[k] = 0.0
+        except Exception as e:
+            print(e)
+
+        scores, self.best_th = compute_scores_and_th(self.all_val_pred, self.all_val_actual)
+        self.log('val mAP on epoch with best TH', 100 * (sum(scores) / len(scores)))
+
+        self.all_val_pred = []
+        self.all_val_actual = []
+        self.val_step_counter = 0
+        self.val_stats = Statistics()
 
 
 def TResnetM(model_params):
@@ -266,8 +318,9 @@ def TResnetM(model_params):
     in_chans = 3
     num_classes = model_params['num_classes']
     remove_aa_jit = model_params['remove_aa_jit']
+    args = model_params['lr']
     model = Tresnet_lightning(layers=[3, 4, 11, 3], num_classes=num_classes, in_chans=in_chans,
-                    remove_aa_jit=remove_aa_jit)
+                    remove_aa_jit=remove_aa_jit, lr=args.lr)
     return model
 
 
