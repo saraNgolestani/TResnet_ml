@@ -290,7 +290,6 @@ class Tresnet_lightning(ptl.LightningModule):
         self.log('val mAP on epoch', 100 * self.val_stats.precision())
         self.log('val loss on epoch', self.val_stats.loss())
         self.log('val best TH on epoch', self.best_th)
-
         # try:
         #     for k, v in self.cls_pre_dict.items():
         #         self.cls_pre_dict[k] = self.cls_pre_dict[k] / self.val_step_counter

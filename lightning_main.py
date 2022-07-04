@@ -34,9 +34,9 @@ parser.add_argument('--dataset_sampling_ratio', default=0.3, type=float, help="s
 parser.add_argument('--seed', default=0, type=int, help="seed for randomness")
 
 checkpoint_callback = ModelCheckpoint(
-    monitor='val mAP on epoch with best TH',
+    monitor='train mAP on epoch with best TH',
     dirpath='saved_models',
-    filename='model-{epoch:03d}-{val mAP on epoch with best TH:.2f}',
+    filename='model-{epoch:03d}-{train mAP on epoch with best TH:.2f}',
     save_top_k=2,
     mode='max'
 )
