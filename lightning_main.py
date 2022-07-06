@@ -15,8 +15,8 @@ from pytorch_lightning.callbacks import LearningRateMonitor
 warnings.filterwarnings('always')
 # torch.backends.cudnn.benchmark = True
 parser = argparse.ArgumentParser(description='PyTorch TResNet ImageNet Inference')
-parser.add_argument('--val_dir')
-parser.add_argument('--model_path')
+parser.add_argument('--checkpoint_name')
+parser.add_argument('--save_path', default='saved_models')
 parser.add_argument('--model_name', type=str, default='tresnet_l')
 parser.add_argument('--num_classes', type=int, default=80)
 parser.add_argument('--input_size', type=int, default=224)
@@ -32,10 +32,12 @@ parser.add_argument('--wandb_name', default='tresnet_mgpu')
 parser.add_argument('--remove_aa_jit', action='store_true', default=True)
 parser.add_argument('--dataset_sampling_ratio', default=0.3, type=float, help="sampling ratio of dataset")
 parser.add_argument('--seed', default=0, type=int, help="seed for randomness")
+parser.add_argument('--load_from_chkp', default=False, type=bool, help="load from check point")
 
+args = parser.parse_args()
 checkpoint_callback = ModelCheckpoint(
     monitor='val mAP on epoch with best TH',
-    dirpath='saved_models',
+    dirpath=args.save_path,
     filename='model-{epoch:03d}-{val mAP on epoch with best TH:.2f}',
     save_top_k=2,
     mode='max'
