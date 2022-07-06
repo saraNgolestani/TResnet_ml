@@ -7,7 +7,7 @@ from  pytorch_lightning import seed_everything
 from pytorch_lightning.loggers import WandbLogger
 import pytorch_lightning as pl
 import torch
-import wandb
+import os
 import warnings
 import random
 import numpy as np
@@ -34,9 +34,9 @@ parser.add_argument('--dataset_sampling_ratio', default=0.3, type=float, help="s
 parser.add_argument('--seed', default=0, type=int, help="seed for randomness")
 
 checkpoint_callback = ModelCheckpoint(
-    monitor='train mAP on epoch with best TH',
+    monitor='val mAP on epoch with best TH',
     dirpath='saved_models',
-    filename='model-{epoch:03d}-{train mAP on epoch with best TH:.2f}',
+    filename='model-{epoch:03d}-{val mAP on epoch with best TH:.2f}',
     save_top_k=2,
     mode='max'
 )
@@ -71,7 +71,10 @@ if __name__ == '__main__':
                          num_nodes=args.num_nodes, gpus=args.num_gpu, accelerator="gpu", devices=args.num_devices, precision=32)
     train_dl = COCODatasetLightning(args).train_dataloader()
     val_dl = COCODatasetLightning(args).val_dataloader()
-    trainer.fit(model, train_dl, val_dl)
+    if args.load_from_chkp:
+        trainer.fit(model, train_dl, val_dl, ckpt_path=os.path.join(args.save_path, args.checkpoint_name))
+    else:
+        trainer.fit(model, train_dl, val_dl)
 
 
 

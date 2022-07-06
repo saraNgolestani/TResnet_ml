@@ -274,14 +274,6 @@ class Tresnet_lightning(ptl.LightningModule):
 
         self.all_val_pred.extend(step_preds.tolist())
         self.all_val_actual.extend(step_actuals.tolist())
-
-        #scores = compute_scores(preds.cpu(), y.cpu())
-        # try:
-        #     for cls_name, cls_pre in zip(self.subclass_flat, scores):
-        #         self.cls_pre_dict[cls_name] = self.cls_pre_dict[cls_name] + cls_pre
-        #     self.val_step_counter += 1
-        # except:
-        #     pass
         self.val_stats.update(loss=float(current_loss), precision=scores, best_th=self.best_th)
         return loss
 
@@ -290,18 +282,10 @@ class Tresnet_lightning(ptl.LightningModule):
         self.log('val mAP on epoch', 100 * self.val_stats.precision())
         self.log('val loss on epoch', self.val_stats.loss())
         self.log('val best TH on epoch', self.best_th)
-        # try:
-        #     for k, v in self.cls_pre_dict.items():
-        #         self.cls_pre_dict[k] = self.cls_pre_dict[k] / self.val_step_counter
-        #     self.log('val AP per class', self.cls_pre_dict)
-        #     # reset all precisions
-        #     for k, v in self.cls_pre_dict.items():
-        #         self.cls_pre_dict[k] = 0.0
-        # except Exception as e:
-        #     print(e)
-
-        scores, self.best_th = compute_scores_and_th(self.all_val_pred, self.all_val_actual)
-        self.log('val mAP on epoch with best TH', 100 * (sum(scores) / len(scores)))
+        if self.all_val_pred and self.all_val_actual:
+            scores, self.best_th = compute_scores_and_th(self.all_val_pred, self.all_val_actual)
+            if scores is not None:
+                self.log('val mAP on epoch with best TH', 100 * (sum(scores) / len(scores)))
         self.all_val_pred = []
         self.all_val_actual = []
         self.val_step_counter = 0
