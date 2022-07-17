@@ -46,35 +46,23 @@ class CocoDetection(datasets.coco.CocoDetection):
         if self.target_transform is not None:
             target = self.target_transform(target)
         return img, target
-        # print(self.cat2cat)
 
 
-def get_dataloaders():
-    batch_size = 128
-    workers = 2
-    num_classes = 80
-    image_size = 228
-    data = '/local/scratch1/makbn/sara/data'
+def get_dataloaders(args):
+    batch_size = args.batch_size
+    workers = args.num_workers
+    num_classes = args.num_classes
+    image_size = args.input_size
+    data = '/home/sara.naserigolestani/hydra-tresnet/data/coco'
     # COCO Data loading
     instances_path_val = os.path.join(data, 'annotations/instances_val2014.json')
     instances_path_train = os.path.join(data, 'annotations/instances_train2014.json')
     data_path_val = f'{data}/val2014'  # args.data
     data_path_train = f'{data}/train2014'  # args.data
-    val_dataset = CocoDetection(data_path_val,
-                                instances_path_val,
-                                transforms.Compose([
-                                    transforms.Resize((image_size, image_size)),
-                                    transforms.ToTensor(),
-                                    # normalize, # no need, toTensor does normalization
-                                ]))
-
-    train_dataset = CocoDetection(data_path_train,
-                                  instances_path_train,
-                                  transforms.Compose([
-                                      transforms.Resize((image_size, image_size)),
-                                      transforms.ToTensor(),
-                                      # normalize,
-                                  ]))
+    val_dataset = load_data_from_file(data_path=data_path_val, instances_path=instances_path_val,
+                                      sampling_ratio=args.dataset_sampling_ratio, seed=0, image_size=image_size)
+    train_dataset = load_data_from_file(data_path=data_path_train, instances_path=instances_path_train,
+                                        sampling_ratio=args.dataset_sampling_ratio, seed=0, image_size=image_size)
     print("len(val_dataset)): ", len(val_dataset))
     print("len(train_dataset)): ", len(train_dataset))
 
@@ -92,6 +80,45 @@ def get_dataloaders():
     return dataloaders, dataset_sizes
 
 
+def load_data_from_file(data_path, instances_path, sampling_ratio=1.0, seed=0, image_size=224):
+    if sampling_ratio == 1.0:
+        print(f'loading the whole dataset from: {data_path}')
+        return CocoDetection(data_path,
+                             instances_path,
+                             transforms.Compose([
+                                 transforms.Resize((image_size, image_size)),
+                                 transforms.ToTensor(),
+                                 # normalize,
+                             ]))
+    else:
+        print(f'loading a subset(%{sampling_ratio * 100}) of dataset from: {data_path}')
+        whole_set = CocoDetection(data_path,
+                                  instances_path,
+                                  transforms.Compose([
+                                      transforms.Resize((image_size, image_size)),
+                                      transforms.ToTensor(),
+                                      # normalize,
+                                  ]))
+        subset_size = int(len(whole_set) * sampling_ratio)
+        random.seed(seed)
+        subset_indices = random.sample(list(range(len(whole_set))), subset_size)
+        subset = torch.utils.data.Subset(whole_set, subset_indices)
+        print(f'subset size: {len(subset)}')
+
+        return subset
+
+
+def get_weighted_labels(phase='train'):
+    dataloaders, dataset_sizes = get_dataloaders()
+    pbar = tqdm.tqdm(dataloaders[phase], desc=f'phase:{phase}')
+    n_samples = []
+    n = np.zeros(80)
+    for _, labels in pbar:
+        for j in labels:
+            for i in range(len(j)):
+                j_array = np.array(j)
+                n[i] = n[i] + j_array[i]
+    return n
 
 
 
