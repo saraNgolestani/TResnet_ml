@@ -8,8 +8,15 @@ from datetime import datetime
 import copy
 import torch.nn.functional as F
 import tqdm
-from src.models.utils.score_utils import Statistics, compute_scores
+from src.models.utils.score_utils import Statistics, compute_scores, compute_scores_and_th
 from src.models.utils.dataset_utils import get_dataloaders
+import warnings
+import wandb
+from sklearn.exceptions import UndefinedMetricWarning
+from pytorch_lightning import seed_everything
+import numpy as np
+import random
+
 
 warnings.filterwarnings("ignore", category=UserWarning)
 warnings.filterwarnings("ignore", category=UndefinedMetricWarning)
@@ -116,11 +123,11 @@ def train_model(model, dataloaders, criterion, optimizer, scheduler, device,  nu
 
                 wandb.log({f'{phase}_loss_perstep': (cum_stats.loss()),
                            f'{phase}_mAP_perstep':(cum_stats.precision()),
-                           'learning_rate': step_lr_scheduler.get_last_lr()[0]})
+                           'learning_rate': scheduler.get_last_lr()[0]})
             scores, TH = compute_scores_and_th(all_preds, all_actuals)
             wandb.log({f'{phase}_loss': (sum(all_loss)/len(all_loss)),
                        f'{phase}_mAP': (100 * (sum(scores) / len(scores))),
-                       'learning_rate': step_lr_scheduler.get_last_lr()[0]})
+                       'learning_rate': scheduler.get_last_lr()[0]})
         if phase == 'val' and (100 * (sum(scores) / len(scores))) > best_precision:
             best_precision = cum_stats.precision()
             best_model_wts = copy.deepcopy(model.state_dict())
@@ -142,7 +149,7 @@ def main():
     set_seed(0)
     args = parser.parse_args()
     wandb.init(project="Hydranet_with_asubsetofdata",
-               name='coco')
+               name='whole_coco')
 
     wandb.config = {
 
@@ -158,7 +165,7 @@ def main():
     print(f'device:{device}\tmodel type: {args.model_type}\t')
 
     scaler = torch.cuda.amp.GradScaler()
-    dataloaders, data_sizes = dataset_utils.get_dataloaders(args=args)
+    dataloaders, data_sizes = get_dataloaders(args=args)
 
     # setup model
     print('creating model...')
@@ -187,4 +194,6 @@ def main():
 
 
 if __name__ == '__main__':
+    set_seed(0)
+    args = parser.parse_args()
     main()
