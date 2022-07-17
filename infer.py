@@ -88,13 +88,10 @@ def train_model(model, dataloaders, criterion, optimizer, scheduler, device,  nu
                 # track history if only in train
                 with torch.set_grad_enabled(phase == 'train'):
                     with torch.cuda.amp.autocast(enabled=(scaler is not None)):
-                        predictions, combined_logits, switch_logits = model(inputs)
+                        predictions = model(inputs)
                         all_actuals.extend(labels.cpu().tolist())
                         all_preds.extend(predictions.detach().cpu().tolist())
-                        pred_loss = criterion(combined_logits, labels)
-                        switch_loss = criterion(switch_logits, labels)
-                        #predictions = torch.sigmoid(predictions)
-                        loss = pred_loss + switch_loss
+                        loss = criterion(predictions, labels)
                         all_loss.append(loss)
                         # backward + optimize only if in training phase
                     if phase == 'train':
