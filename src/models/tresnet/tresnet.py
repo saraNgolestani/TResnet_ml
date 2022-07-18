@@ -127,6 +127,8 @@ class Tresnet_lightning(ptl.LightningModule):
         super(Tresnet_lightning, self).__init__()
         self.best_th = 0.45
         self.val_step_counter = 0
+        self.all_test_pred = []
+        self.all_test_actual = []
         self.all_val_pred = []
         self.all_val_actual = []
         self.all_train_pred = []
@@ -135,23 +137,27 @@ class Tresnet_lightning(ptl.LightningModule):
         self.train_stats = Statistics()
         self.test_stats = Statistics()
         self.lr = lr
-
+        self.layers = layers
+        self.in_chans = in_chans
+        self.num_classes = num_classes
+        self.width_factor = width_factor
+        self.remove_aa_jit = remove_aa_jit
         # JIT layers
         space_to_depth = SpaceToDepthModule()
-        anti_alias_layer = partial(AntiAliasDownsampleLayer, remove_aa_jit=remove_aa_jit)
+        anti_alias_layer = partial(AntiAliasDownsampleLayer, remove_aa_jit=self.remove_aa_jit)
         global_pool_layer = FastGlobalAvgPool2d(flatten=True)
 
         # TResnet stages
-        self.inplanes = int(64 * width_factor)
-        self.planes = int(64 * width_factor)
-        conv1 = self.conv2d_ABN(in_chans * 16, self.planes, stride=1, kernel_size=3)
-        layer1 = self._make_layer(BasicBlock, self.planes, layers[0], stride=1, use_se=True,
+        self.inplanes = int(64 * self.width_factor)
+        self.planes = int(64 * self.width_factor)
+        conv1 = self.conv2d_ABN(self.in_chans * 16, self.planes, stride=1, kernel_size=3)
+        layer1 = self._make_layer(BasicBlock, self.planes, self.layers[0], stride=1, use_se=True,
                                   anti_alias_layer=anti_alias_layer)  # 56x56
-        layer2 = self._make_layer(BasicBlock, self.planes * 2, layers[1], stride=2, use_se=True,
+        layer2 = self._make_layer(BasicBlock, self.planes * 2, self.layers[1], stride=2, use_se=True,
                                   anti_alias_layer=anti_alias_layer)  # 28x28
-        layer3 = self._make_layer(Bottleneck, self.planes * 4, layers[2], stride=2, use_se=True,
+        layer3 = self._make_layer(Bottleneck, self.planes * 4, self.layers[2], stride=2, use_se=True,
                                   anti_alias_layer=anti_alias_layer)  # 14x14
-        layer4 = self._make_layer(Bottleneck, self.planes * 8, layers[3], stride=2, use_se=False,
+        layer4 = self._make_layer(Bottleneck, self.planes * 8, self.layers[3], stride=2, use_se=False,
                                   anti_alias_layer=anti_alias_layer)  # 7x7
 
         # body
@@ -167,7 +173,7 @@ class Tresnet_lightning(ptl.LightningModule):
         self.embeddings = []
         self.global_pool = nn.Sequential(OrderedDict([('global_pool_layer', global_pool_layer)]))
         self.num_features = (self.planes * 8) * Bottleneck.expansion
-        fc = nn.Linear(self.num_features, num_classes)
+        fc = nn.Linear(self.num_features,  self.num_classes)
         self.head = nn.Sequential(OrderedDict([('fc', fc)]))
 
         # model initilization
@@ -290,6 +296,24 @@ class Tresnet_lightning(ptl.LightningModule):
         self.all_val_actual = []
         self.val_step_counter = 0
         self.val_stats = Statistics()
+
+    def test_step(self, test_batch, test_idx):
+        x, y = test_batch
+        logits = self.forward(x)
+        loss = self.bcewithlogits_loss(logits, y.float())
+        current_loss = loss.item() * x.size(0)
+        step_preds = logits.detach().cpu()
+        step_actuals = y.cpu()
+        scores, _ = compute_scores_and_th(step_preds, step_actuals, self.best_th)
+        self.all_test_pred.extend(step_preds.tolist())
+        self.all_test_actual.extend(step_actuals.tolist())
+
+    def test_epoch_end(self, outputs):
+        if self.all_test_pred and self.all_test_actual:
+            scores, best_th = compute_scores_and_th(self.all_test_pred, self.all_test_actual)
+            if scores is not None:
+                self.log('test mAP on epoch with best TH', 100 * (sum(scores) / len(scores)))
+                self.log('test best TH', best_th)
 
 
 def TResnetM(model_params):

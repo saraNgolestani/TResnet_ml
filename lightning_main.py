@@ -2,8 +2,9 @@
 from src.models import create_model
 import argparse
 from src.models.utils.dataset_utils import COCODatasetLightning
+from src.models.utils.uav_utils import UAVDatasetLightning
 from pytorch_lightning.callbacks import ModelCheckpoint
-from  pytorch_lightning import seed_everything
+from pytorch_lightning import seed_everything
 from pytorch_lightning.loggers import WandbLogger
 import pytorch_lightning as pl
 import torch
@@ -33,6 +34,7 @@ parser.add_argument('--remove_aa_jit', action='store_true', default=True)
 parser.add_argument('--dataset_sampling_ratio', default=0.3, type=float, help="sampling ratio of dataset")
 parser.add_argument('--seed', default=0, type=int, help="seed for randomness")
 parser.add_argument('--load_from_chkp', default=False, type=bool, help="load from check point")
+parser.add_argument('--train', default=False, type=bool, help="load from check point")
 
 args = parser.parse_args()
 checkpoint_callback = ModelCheckpoint(
@@ -73,10 +75,15 @@ if __name__ == '__main__':
                          num_nodes=args.num_nodes, gpus=args.num_gpu, accelerator="gpu", devices=args.num_devices, precision=32)
     train_dl = COCODatasetLightning(args).train_dataloader()
     val_dl = COCODatasetLightning(args).val_dataloader()
-    if args.load_from_chkp:
+    if args.load_from_chkp and args.train:
         trainer.fit(model, train_dl, val_dl, ckpt_path=os.path.join(args.save_path, args.checkpoint_name))
-    else:
+    elif args.train:
         trainer.fit(model, train_dl, val_dl)
+
+    if not args.train:
+        test_model = model.load_from_checkpoint(checkpoint_path=os.path.join(args.save_path, args.checkpoint_name))
+        test_uav_dl = UAVDatasetLightning.val_dataloader()
+        trainer.test(test_model, test_uav_dl)
 
 
 
