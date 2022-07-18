@@ -307,6 +307,7 @@ class Tresnet_lightning(ptl.LightningModule):
         scores, _ = compute_scores_and_th(step_preds, step_actuals, self.best_th)
         self.all_test_pred.extend(step_preds.tolist())
         self.all_test_actual.extend(step_actuals.tolist())
+        return loss
 
     def test_epoch_end(self, outputs):
         if self.all_test_pred and self.all_test_actual:

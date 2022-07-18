@@ -1,3 +1,5 @@
+from typing import Union, Tuple, List
+
 import numpy as np
 import torch
 import json
@@ -11,6 +13,8 @@ import itertools
 from PIL import Image
 import pickle
 import random
+from torch.utils.data import Dataset, DataLoader
+
 
 
 def _isArrayLike(obj):
@@ -162,12 +166,14 @@ class UAVArialDetection(datasets.coco.CocoDetection):
         self.root = root
         self.uav = UAV(annFile)
         self.ids = list(self.uav.imgToAnns.keys())
+        print(f'ids len:{len(self.ids)}')
         self.transform = transform
         self.target_transform = target_transform
         with open('/home/sara.naserigolestani/hydra-tresnet/saved_cat2cat.pkl', 'rb') as f:
             loaded_cat2cat = pickle.load(f)
         self.cat2cat = loaded_cat2cat
-        print(self.cat2cat)
+    def __len__(self):
+        return len(self.ids)
 
     def __getitem__(self, index):
         uav = self.uav
@@ -207,7 +213,7 @@ class UAVArialDetection(datasets.coco.CocoDetection):
 
 class UAVDatasetLightning(LightningDataModule):
     def __init__(self):
-        #super().__init__()
+        super().__init__()
         self.workers = 2
         self.num_classes = 80
         self.image_size = 224
@@ -226,7 +232,7 @@ class UAVDatasetLightning(LightningDataModule):
     def prepare_data(self):
         pass
 
-    def train_dataloader(self):
+    def test_dataloader(self):
         train_dl = torch.utils.data.DataLoader(
             self.train_dataset, batch_size=self.batch_size, shuffle=True,
             pin_memory=True, drop_last=True)
@@ -236,6 +242,20 @@ class UAVDatasetLightning(LightningDataModule):
         val_dl = torch.utils.data.DataLoader(
             self.val_dataset, batch_size=self.batch_size,
             pin_memory=True, drop_last=True)
+
+        print(f'size of dataset: {len(self.val_dataset)}')
+        print(f'size of dataloader: {len(val_dl)}')
+
+        return val_dl
+
+    def train_dataloader(self):
+        val_dl = torch.utils.data.DataLoader(
+            self.val_dataset, batch_size=self.batch_size,
+            pin_memory=True, drop_last=True)
+
+        print(f'size of dataset: {len(self.val_dataset)}')
+        print(f'size of dataloader: {len(val_dl)}')
+
         return val_dl
 
     def load_data_from_file(self, data_path, instances_path, sampling_ratio=1.0, seed=0):
