@@ -75,6 +75,7 @@ if __name__ == '__main__':
                          num_nodes=args.num_nodes, gpus=args.num_gpu, accelerator="gpu", devices=args.num_devices, precision=32)
     train_dl = COCODatasetLightning(args).train_dataloader()
     val_dl = COCODatasetLightning(args).val_dataloader()
+    test_dl = COCODatasetLightning(args).test_dataloader()
     if args.load_from_chkp and args.train:
         trainer.fit(model, train_dl, val_dl, ckpt_path=os.path.join(args.save_path, args.checkpoint_name))
     elif args.train:
@@ -82,7 +83,7 @@ if __name__ == '__main__':
 
     if not args.train:
         data_module = UAVDatasetLightning()
-        trainer.test(model=model, datamodule=data_module, ckpt_path=os.path.join(args.save_path, args.checkpoint_name))
+        trainer.test(model=model, dataloaders=test_dl, ckpt_path=os.path.join(args.save_path, args.checkpoint_name))
 
 
 
