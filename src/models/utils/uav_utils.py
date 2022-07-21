@@ -218,7 +218,7 @@ class UAVDatasetLightning(LightningDataModule):
         self.num_classes = 80
         self.image_size = 224
         self.data_path = '/home/sara.naserigolestani/hydra-tresnet/data/uav/aerial_yolo'
-        self.batch_size = 16
+        self.batch_size = 10
 
         instances_path_val = os.path.join(self.data_path, 'valid/fixed_annotations2.json')
         instances_path_train = os.path.join(self.data_path, 'train/fixed_annotations2.json')
