@@ -134,16 +134,12 @@ class COCODatasetLightning(LightningDataModule):
 
         instances_path_val = os.path.join(self.data_path, 'annotations/instances_val2014.json')
         instances_path_train = os.path.join(self.data_path, 'annotations/instances_train2014.json')
-        instances_path_test = os.path.join(self.data_path, 'test/annotations/image_info_test2014.json')
-        data_path_test = f'{self.data_path}/test/test2014'
         data_path_val = f'{self.data_path}/val2014'  # args.data
         data_path_train = f'{self.data_path}/train2014'  # args.data
         self.train_dataset = self.load_data_from_file(data_path=data_path_train, instances_path=instances_path_train,
                                                       sampling_ratio=args.dataset_sampling_ratio, seed=args.seed)
         self.val_dataset = self.load_data_from_file(data_path=data_path_val, instances_path=instances_path_val,
                                                     sampling_ratio=args.dataset_sampling_ratio, seed=args.seed)
-        self.test_dataset = self.load_data_from_file(data_path=data_path_test, instances_path=instances_path_test,
-                                                     sampling_ratio=args.dataset_sampling_ratio, seed=args.seed)
 
     def prepare_data(self):
         pass
@@ -159,12 +155,6 @@ class COCODatasetLightning(LightningDataModule):
             self.val_dataset, batch_size=self.batch_size,
             pin_memory=True, drop_last=True)
         return val_dl
-
-    def test_dataloader(self):
-        test_dl = torch.utils.data.DataLoader(
-            self.test_dataset, batch_size=self.batch_size,
-            pin_memory=True, drop_last=True)
-        return test_dl
 
     def load_data_from_file(self, data_path, instances_path, sampling_ratio=1.0, seed=0):
         if sampling_ratio == 1.0:

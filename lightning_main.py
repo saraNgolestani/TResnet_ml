@@ -22,7 +22,7 @@ parser.add_argument('--model_name', type=str, default='tresnet_l')
 parser.add_argument('--num_classes', type=int, default=80)
 parser.add_argument('--input_size', type=int, default=224)
 parser.add_argument('--val_zoom_factor', type=int, default=0.875)
-parser.add_argument('--batch_size', type=int, default=64)
+parser.add_argument('--batch_size', type=int, default=10)
 parser.add_argument('--num_epochs', type=int, default=200)
 parser.add_argument('--max_epochs', type=int, default=300)
 parser.add_argument('--num_workers', type=int, default=2)
@@ -71,11 +71,13 @@ if __name__ == '__main__':
 
     run()
     model = create_model(args)
-    trainer = pl.Trainer(logger=wandb_logger, callbacks=[checkpoint_callback, lr_monitor], max_epochs=args.max_epochs,
+    trainer = pl.Trainer(logger=wandb_logger, callbacks=[checkpoint_callback, lr_monitor], max_epochs=args.num_epochs,
                          num_nodes=args.num_nodes, gpus=args.num_gpu, accelerator="gpu", devices=args.num_devices, precision=32)
-    train_dl = COCODatasetLightning(args).train_dataloader()
-    val_dl = COCODatasetLightning(args).val_dataloader()
-    test_dl = COCODatasetLightning(args).test_dataloader()
+    # train_dl = COCODatasetLightning(args).train_dataloader()
+    # val_dl = COCODatasetLightning(args).val_dataloader()
+    # test_dl = COCODatasetLightning(args).test_dataloader()
+    train_dl = UAVDatasetLightning().train_dataloader()
+    val_dl = UAVDatasetLightning().val_dataloader()
     if args.load_from_chkp and args.train:
         trainer.fit(model, train_dl, val_dl, ckpt_path=os.path.join(args.save_path, args.checkpoint_name))
     elif args.train:
@@ -83,7 +85,7 @@ if __name__ == '__main__':
 
     if not args.train:
         data_module = UAVDatasetLightning()
-        trainer.test(model=model, dataloaders=test_dl, ckpt_path=os.path.join(args.save_path, args.checkpoint_name))
+        trainer.test(model=model, datamodule=data_module, ckpt_path=os.path.join(args.save_path, args.checkpoint_name))
 
 
 
