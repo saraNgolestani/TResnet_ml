@@ -232,7 +232,7 @@ class UAVDatasetLightning(LightningDataModule):
     def prepare_data(self):
         pass
 
-    def test_dataloader(self):
+    def train_dataloader(self):
         train_dl = torch.utils.data.DataLoader(
             self.train_dataset, batch_size=self.batch_size, shuffle=True,
             pin_memory=True, drop_last=True)
@@ -242,20 +242,12 @@ class UAVDatasetLightning(LightningDataModule):
         val_dl = torch.utils.data.DataLoader(
             self.val_dataset, batch_size=self.batch_size,
             pin_memory=True, drop_last=True)
-
-        print(f'size of dataset: {len(self.val_dataset)}')
-        print(f'size of dataloader: {len(val_dl)}')
-
         return val_dl
 
-    def train_dataloader(self):
+    def test_dataloader(self):
         val_dl = torch.utils.data.DataLoader(
             self.val_dataset, batch_size=self.batch_size,
             pin_memory=True, drop_last=True)
-
-        print(f'size of dataset: {len(self.val_dataset)}')
-        print(f'size of dataloader: {len(val_dl)}')
-
         return val_dl
 
     def load_data_from_file(self, data_path, instances_path, sampling_ratio=1.0, seed=0):
