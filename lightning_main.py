@@ -85,7 +85,7 @@ if __name__ == '__main__':
         trainer.fit(model, train_dl, val_dl)
 
     if not args.train:
-        data_module = UAVDatasetLightning()
+        data_module = UAVDatasetLightning(args)
         trainer.test(model=model, datamodule=data_module, ckpt_path=os.path.join(args.save_path, args.checkpoint_name))
 
 
