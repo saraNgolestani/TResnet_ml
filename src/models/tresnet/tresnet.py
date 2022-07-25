@@ -304,14 +304,13 @@ class Tresnet_lightning(ptl.LightningModule):
         current_loss = loss.item() * x.size(0)
         step_preds = logits.detach().cpu()
         step_actuals = y.cpu()
-        scores, _ = compute_scores_and_th(step_preds, step_actuals, self.best_th)
         self.all_test_pred.extend(step_preds.tolist())
         self.all_test_actual.extend(step_actuals.tolist())
         return loss
 
     def test_epoch_end(self, outputs):
         if self.all_test_pred and self.all_test_actual:
-            scores, best_th = compute_scores_and_th(self.all_test_pred, self.all_test_actual)
+            scores, best_th = compute_scores_and_th(self.all_test_pred, self.all_test_actual, self.best_th)
             if scores is not None:
                 self.log('test mAP on epoch with best TH', 100 * (sum(scores) / len(scores)))
                 self.log('test best TH', best_th)
