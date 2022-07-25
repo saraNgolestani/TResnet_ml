@@ -51,6 +51,7 @@ def set_seed(seed=0):
     np.random.seed(seed)
     random.seed(seed)
 
+
 def run():
     torch.multiprocessing.freeze_support()
     print('loop')

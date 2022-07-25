@@ -212,6 +212,16 @@ class UAVArialDetection(datasets.coco.CocoDetection):
         return img, target
 
 
+def seed_worker(worker_id):
+    worker_seed = torch.initial_seed() % 2**32
+    np.random.seed(worker_seed)
+    random.seed(worker_seed)
+
+
+g = torch.Generator()
+g.manual_seed(0)
+
+
 class UAVDatasetLightning(LightningDataModule):
     def __init__(self, args):
         super().__init__()
@@ -236,13 +246,13 @@ class UAVDatasetLightning(LightningDataModule):
     def train_dataloader(self):
         train_dl = torch.utils.data.DataLoader(
             self.train_dataset, batch_size=self.batch_size, shuffle=True,
-            pin_memory=True, drop_last=True)
+            pin_memory=True, drop_last=True, worker_init_fn=seed_worker, generator=g)
         return train_dl
 
     def val_dataloader(self):
         val_dl = torch.utils.data.DataLoader(
             self.val_dataset, batch_size=self.batch_size,
-            pin_memory=True, drop_last=True)
+            pin_memory=True, drop_last=True, worker_init_fn=seed_worker, generator=g)
 
         print(f'size of dataset: {len(self.val_dataset)}')
         print(f'size of dataloader: {len(val_dl)}')
@@ -252,7 +262,7 @@ class UAVDatasetLightning(LightningDataModule):
     def test_dataloader(self):
         val_dl = torch.utils.data.DataLoader(
             self.val_dataset, batch_size=self.batch_size,
-            pin_memory=True, drop_last=True)
+            pin_memory=True, drop_last=True, worker_init_fn=seed_worker, generator=g)
 
         print(f'size of dataset: {len(self.val_dataset)}')
         print(f'size of dataloader: {len(val_dl)}')
