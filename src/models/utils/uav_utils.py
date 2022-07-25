@@ -213,7 +213,7 @@ class UAVArialDetection(datasets.coco.CocoDetection):
 
 
 def seed_worker(worker_id):
-    worker_seed = torch.initial_seed()
+    worker_seed = torch.initial_seed() % 2**32
     np.random.seed(worker_seed)
     random.seed(worker_seed)
 
