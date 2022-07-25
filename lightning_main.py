@@ -22,8 +22,8 @@ parser.add_argument('--model_name', type=str, default='tresnet_l')
 parser.add_argument('--num_classes', type=int, default=80)
 parser.add_argument('--input_size', type=int, default=224)
 parser.add_argument('--val_zoom_factor', type=int, default=0.875)
-parser.add_argument('--batch_size', type=int, default=10)
-parser.add_argument('--num_epochs', type=int, default=200)
+parser.add_argument('--batch_size', type=int, default=8)
+parser.add_argument('--num_epochs', type=int, default=50)
 parser.add_argument('--max_epochs', type=int, default=300)
 parser.add_argument('--num_workers', type=int, default=2)
 parser.add_argument('--num_devices', type=int, default=2)
@@ -40,7 +40,7 @@ args = parser.parse_args()
 checkpoint_callback = ModelCheckpoint(
     monitor='val mAP on epoch with best TH',
     dirpath=args.save_path,
-    filename='model-{epoch:03d}-{val mAP on epoch with best TH:.2f}',
+    filename='model-{epoch:03d}-{val mAP on UAV:.2f}',
     save_top_k=2,
     mode='max'
 )
