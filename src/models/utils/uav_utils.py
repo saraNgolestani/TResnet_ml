@@ -225,7 +225,7 @@ g.manual_seed(0)
 class UAVDatasetLightning(LightningDataModule):
     def __init__(self, args):
         super().__init__()
-        self.workers = 2
+        self.workers = 1
         self.num_classes = args.num_classes
         self.image_size = 224
         self.data_path = '/home/sara.naserigolestani/hydra-tresnet/data/uav/aerial_yolo'
