@@ -225,7 +225,7 @@ g.manual_seed(0)
 class UAVDatasetLightning(LightningDataModule):
     def __init__(self, args):
         super().__init__()
-        self.workers = 40
+        self.workers = 2
         self.num_classes = args.num_classes
         self.image_size = 224
         self.data_path = '/home/sara.naserigolestani/hydra-tresnet/data/uav/aerial_yolo'
@@ -246,13 +246,13 @@ class UAVDatasetLightning(LightningDataModule):
     def train_dataloader(self):
         train_dl = torch.utils.data.DataLoader(
             self.train_dataset, batch_size=self.batch_size, shuffle=True,
-            pin_memory=True, drop_last=True, worker_init_fn=seed_worker, generator=g)
+            pin_memory=True, drop_last=True, num_workers= self.workers, worker_init_fn=seed_worker, generator=g)
         return train_dl
 
     def val_dataloader(self):
         val_dl = torch.utils.data.DataLoader(
             self.val_dataset, batch_size=self.batch_size,
-            pin_memory=True, drop_last=True, worker_init_fn=seed_worker, generator=g)
+            pin_memory=True, drop_last=True,num_workers= self.workers, worker_init_fn=seed_worker, generator=g)
 
         print(f'size of dataset: {len(self.val_dataset)}')
         print(f'size of dataloader: {len(val_dl)}')
@@ -262,7 +262,7 @@ class UAVDatasetLightning(LightningDataModule):
     def test_dataloader(self):
         val_dl = torch.utils.data.DataLoader(
             self.val_dataset, batch_size=self.batch_size,
-            pin_memory=True, drop_last=True, worker_init_fn=seed_worker, generator=g)
+            pin_memory=True, drop_last=True ,num_workers= self.workers, worker_init_fn=seed_worker, generator=g)
 
         print(f'size of dataset: {len(self.val_dataset)}')
         print(f'size of dataloader: {len(val_dl)}')
