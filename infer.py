@@ -57,7 +57,7 @@ def train_model(model, dataloaders, criterion, optimizer, scheduler, device,  nu
     best_model_wts = copy.deepcopy(model.state_dict())
     best_precision = 0.0
     global_step = 0
-    save_path = args.save_path + '/Tresnet_bestThapproach.pt'
+    save_path = args.save_path + '/Tresnet_coco2017.pt'
     TH = 0.45
 
     for epoch in range(num_epochs):
@@ -145,8 +145,8 @@ def main():
     # parsing args
     set_seed(0)
     args = parser.parse_args()
-    wandb.init(project="Hydranet_with_asubsetofdata",
-               name='whole_coco')
+    wandb.init(project="tresnet_coco2017",
+               name='coco2017')
 
     wandb.config = {
 
