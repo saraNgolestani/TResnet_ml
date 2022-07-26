@@ -16,8 +16,8 @@ from src.models.utils.dataset_utils import get_dataloaders
 parser = argparse.ArgumentParser(description='PyTorch TResNet ImageNet Inference')
 parser.add_argument('--val_dir')
 parser.add_argument('--model_path')
-parser.add_argument('--model_name', type=str, default='tresnet_m')
-parser.add_argument('--num_classes', type=int, default=80)
+parser.add_argument('--model_name', type=str, default='tresnet_l')
+parser.add_argument('--num_classes', type=int, default=90)
 parser.add_argument('--input_size', type=int, default=224)
 parser.add_argument('--val_zoom_factor', type=int, default=0.875)
 parser.add_argument('--batch_size', type=int, default=48)
@@ -32,7 +32,7 @@ def train_model(model, dataloaders, criterion, optimizer, scheduler, device,  nu
     since = time.time()
     best_model_wts = copy.deepcopy(model.state_dict())
     best_precision = 0.0
-    save_path = 'model/Tresnet_M_single_imagenet.pt'
+    save_path = 'model/Tresnet_L_coco2017.pt'
     TH = 0.5
 
     for epoch in range(num_epochs):

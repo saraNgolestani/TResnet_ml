@@ -36,7 +36,7 @@ class CocoDetection(datasets.coco.CocoDetection):
         ann_ids = coco.getAnnIds(imgIds=img_id)
         target = coco.loadAnns(ann_ids)
 
-        output = torch.zeros((80), dtype=torch.long)
+        output = torch.zeros((90), dtype=torch.long)
         for obj in target:
             output[self.cat2cat[obj['category_id']]] = 1
         target = output
@@ -54,7 +54,7 @@ def get_weighted_labels(phase='train'):
     dataloaders, dataset_sizes = get_dataloaders()
     pbar = tqdm.tqdm(dataloaders[phase], desc=f'phase:{phase}')
     n_samples = []
-    n = np.zeros(80)
+    n = np.zeros(90)
     for _, labels in pbar:
         for j in labels:
             for i in range(len(j)):
@@ -66,16 +66,15 @@ def get_weighted_labels(phase='train'):
 def get_dataloaders():
     batch_size = 128
     workers = 2
-    num_classes = 80
+    num_classes = 90
     image_size = 224
     data = '/home/sara.naserigolestani/hydra-tresnet/data/coco'
     # COCO Data loading
-    instances_path_val = os.path.join(data, 'annotations/instances_val2014.json')
-    instances_path_train = os.path.join(data, 'annotations/instances_train2014.json')
-    instances_path_test = os.path.join(data, 'test/annotations/image_info_test2014.json')
-    data_path_val = f'{data}/val2014'  # args.data
-    data_path_train = f'{data}/train2014'  # args.data
-    data_path_test = f'{data}/test/test2014'
+    instances_path_val = os.path.join(data, 'annotations/instances_val2017.json')
+    instances_path_train = os.path.join(data, 'annotations/instances_train2017.json')
+    data_path_val = f'{data}/val2017'  # args.data
+    data_path_train = f'{data}/train2017'  # args.data
+
     val_dataset = CocoDetection(data_path_val,
                                 instances_path_val,
                                 transforms.Compose([
@@ -91,17 +90,8 @@ def get_dataloaders():
                                       transforms.ToTensor(),
                                       # normalize,
                                   ]))
-
-    test_dataset = CocoDetection(data_path_test,
-                                 instances_path_test,
-                                 transforms.Compose([
-                                     transforms.Resize((image_size, image_size)),
-                                     transforms.ToTensor(),
-                                     # normalize,
-                                 ]))
     print("len(val_dataset)): ", len(val_dataset))
     print("len(train_dataset)): ", len(train_dataset))
-    print("len(test_dataset)): ", len(test_dataset))
 
 
 
@@ -114,11 +104,8 @@ def get_dataloaders():
         val_dataset, batch_size=batch_size, shuffle=False,
         num_workers=workers, pin_memory=False, drop_last=True)
 
-    test_dl = torch.utils.data.DataLoader(
-        test_dataset, batch_size=batch_size, shuffle=False,
-        num_workers=workers, pin_memory=False, drop_last=True)
-    dataloaders = {'train': train_dl, 'val': val_dl, 'test': test_dl}
-    dataset_sizes = {'train': len(train_dataset), 'val': len(val_dataset), 'test' : len(test_dataset)}
+    dataloaders = {'train': train_dl, 'val': val_dl}
+    dataset_sizes = {'train': len(train_dataset), 'val': len(val_dataset)}
 
     return dataloaders, dataset_sizes
 
@@ -127,15 +114,15 @@ class COCODatasetLightning(LightningDataModule):
     def __init__(self, args):
         super().__init__()
         self.workers = 2
-        self.num_classes = 80
+        self.num_classes = args.num_classes
         self.image_size = args.input_size
         self.data_path = '/home/sara.naserigolestani/hydra-tresnet/data/coco'
         self.batch_size = args.batch_size
 
-        instances_path_val = os.path.join(self.data_path, 'annotations/instances_val2014.json')
-        instances_path_train = os.path.join(self.data_path, 'annotations/instances_train2014.json')
-        data_path_val = f'{self.data_path}/val2014'  # args.data
-        data_path_train = f'{self.data_path}/train2014'  # args.data
+        instances_path_val = os.path.join(self.data_path, 'annotations/instances_val2017.json')
+        instances_path_train = os.path.join(self.data_path, 'annotations/instances_train2017.json')
+        data_path_val = f'{self.data_path}/val2017'  # args.data
+        data_path_train = f'{self.data_path}/train2017'  # args.data
         self.train_dataset = self.load_data_from_file(data_path=data_path_train, instances_path=instances_path_train,
                                                       sampling_ratio=args.dataset_sampling_ratio, seed=args.seed)
         self.val_dataset = self.load_data_from_file(data_path=data_path_val, instances_path=instances_path_val,

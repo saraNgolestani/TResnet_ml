@@ -19,7 +19,7 @@ parser = argparse.ArgumentParser(description='PyTorch TResNet ImageNet Inference
 parser.add_argument('--checkpoint_name')
 parser.add_argument('--save_path', default='saved_models')
 parser.add_argument('--model_name', type=str, default='tresnet_l')
-parser.add_argument('--num_classes', type=int, default=80)
+parser.add_argument('--num_classes', type=int, default=90)
 parser.add_argument('--input_size', type=int, default=224)
 parser.add_argument('--val_zoom_factor', type=int, default=0.875)
 parser.add_argument('--batch_size', type=int, default=8)
