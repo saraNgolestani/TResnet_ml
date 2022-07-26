@@ -15,6 +15,7 @@ import os
 import tqdm
 from torchvision import transforms
 
+
 class CocoDetection(datasets.coco.CocoDetection):
     def __init__(self, root, annFile, transform=None, target_transform=None):
         self.root = root
@@ -34,7 +35,7 @@ class CocoDetection(datasets.coco.CocoDetection):
         ann_ids = coco.getAnnIds(imgIds=img_id)
         target = coco.loadAnns(ann_ids)
 
-        output = torch.zeros((80), dtype=torch.long)
+        output = torch.zeros((90), dtype=torch.long)
         for obj in target:
             output[self.cat2cat[obj['category_id']]] = 1
         target = output
@@ -55,10 +56,10 @@ def get_dataloaders(args):
     image_size = args.input_size
     data = '/home/sara.naserigolestani/hydra-tresnet/data/coco'
     # COCO Data loading
-    instances_path_val = os.path.join(data, 'annotations/instances_val2014.json')
-    instances_path_train = os.path.join(data, 'annotations/instances_train2014.json')
-    data_path_val = f'{data}/val2014'  # args.data
-    data_path_train = f'{data}/train2014'  # args.data
+    instances_path_val = os.path.join(data, 'annotations/instances_val2017.json')
+    instances_path_train = os.path.join(data, 'annotations/instances_train2017.json')
+    data_path_val = f'{data}/val2017'  # args.data
+    data_path_train = f'{data}/train2017'  # args.data
     val_dataset = load_data_from_file(data_path=data_path_val, instances_path=instances_path_val,
                                       sampling_ratio=args.dataset_sampling_ratio, seed=0, image_size=image_size)
     train_dataset = load_data_from_file(data_path=data_path_train, instances_path=instances_path_train,

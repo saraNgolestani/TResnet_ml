@@ -41,7 +41,7 @@ parser.add_argument('--train_precision', default=16, type=int, help="model preci
 parser.add_argument('--max_epoch', default=300, type=int, help="max number of epochs")
 parser.add_argument('--dataset_sampling_ratio', default=1.0, type=float, help="sampling ratio of dataset")
 parser.add_argument('--seed', default=0, type=int, help="seed for randomness")
-parser.add_argument('--lr', default=5e-4, type=float, help="learning rate")
+parser.add_argument('--lr', default=1e-3, type=float, help="learning rate")
 parser.add_argument('--load_from_path', default=False, type=bool, help='whether to load from an old model statics or not')
 
 
