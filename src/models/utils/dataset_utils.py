@@ -113,7 +113,7 @@ def get_weighted_labels(phase='train'):
     dataloaders, dataset_sizes = get_dataloaders()
     pbar = tqdm.tqdm(dataloaders[phase], desc=f'phase:{phase}')
     n_samples = []
-    n = np.zeros(80)
+    n = np.zeros(90)
     for _, labels in pbar:
         for j in labels:
             for i in range(len(j)):
