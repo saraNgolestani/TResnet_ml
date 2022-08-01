@@ -16,6 +16,8 @@ from sklearn.exceptions import UndefinedMetricWarning
 from pytorch_lightning import seed_everything
 import numpy as np
 import random
+import os
+import src.models.utils.uav_utils as UAV
 
 
 warnings.filterwarnings("ignore", category=UserWarning)
@@ -25,10 +27,11 @@ warnings.filterwarnings("ignore", category=UndefinedMetricWarning)
 parser = argparse.ArgumentParser(description='PyTorch TResNet ImageNet Inference')
 parser.add_argument('--val_dir')
 parser.add_argument('--save_path', default='saved_models')
+parser.add_argument('--save_name', default='name of the model')
 parser.add_argument('--tresnet_unit_size', default='L', choices=['M', 'L', 'XL'], help='TResNet model size')
 parser.add_argument('--model_type', default='tresnet', choices=['basic', 'tresnet'], help='model types')
 parser.add_argument('--model_name', type=str, default='tresnet_l')
-parser.add_argument('--num_classes', type=int, default=90)
+parser.add_argument('--num_classes', type=int, default=80)
 parser.add_argument('--input_size', type=int, default=224)
 parser.add_argument('--val_zoom_factor', type=int, default=0.875)
 parser.add_argument('--batch_size', type=int, default=32)
@@ -42,7 +45,7 @@ parser.add_argument('--max_epoch', default=300, type=int, help="max number of ep
 parser.add_argument('--dataset_sampling_ratio', default=1.0, type=float, help="sampling ratio of dataset")
 parser.add_argument('--seed', default=0, type=int, help="seed for randomness")
 parser.add_argument('--lr', default=1e-3, type=float, help="learning rate")
-parser.add_argument('--load_from_path', default=False, type=bool, help='whether to load from an old model statics or not')
+parser.add_argument('--load_from_path', default=True, type=bool, help='whether to load from an old model statics or not')
 
 
 def set_seed(seed=0):
@@ -57,7 +60,7 @@ def train_model(model, dataloaders, criterion, optimizer, scheduler, device,  nu
     best_model_wts = copy.deepcopy(model.state_dict())
     best_precision = 0.0
     global_step = 0
-    save_path = args.save_path + '/Tresnet_coco2017.pt'
+    save_path = os.path.join(args.save_path, args.save_name)
     TH = 0.45
 
     for epoch in range(num_epochs):
@@ -162,8 +165,10 @@ def main():
     print(f'device:{device}\tmodel type: {args.model_type}\t')
 
     scaler = torch.cuda.amp.GradScaler()
-    dataloaders, data_sizes = get_dataloaders(args=args)
-
+    # dataloaders, data_sizes = get_dataloaders(args=args)
+    train_dl = UAV.UAVDatasetLightning(args).train_dataloader()
+    val_dl = UAV.UAVDatasetLightning(args).val_dataloader()
+    dataloaders = {'train': train_dl, 'val': val_dl}
     # setup model
     print('creating model...')
     model = create_model(args).cuda()
@@ -181,7 +186,7 @@ def main():
 # actual validation process
 
     if args.load_from_path:
-        model.load_state_dict(torch.load(args.save_path))
+        model.load_state_dict(os.path.join(args.save_path, args.save_name))
     print('doing training...')
     best_model = train_model(model=model, dataloaders=dataloaders, criterion=criterion, optimizer=optimizer, scheduler=step_lr_scheduler,
                              device=device, num_epochs=args.num_epochs, scaler=scaler)
