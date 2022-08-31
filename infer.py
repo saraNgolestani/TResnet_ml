@@ -16,6 +16,7 @@ from sklearn.exceptions import UndefinedMetricWarning
 from pytorch_lightning import seed_everything
 import numpy as np
 import random
+import os
 
 
 warnings.filterwarnings("ignore", category=UserWarning)
@@ -25,6 +26,7 @@ warnings.filterwarnings("ignore", category=UndefinedMetricWarning)
 parser = argparse.ArgumentParser(description='PyTorch TResNet ImageNet Inference')
 parser.add_argument('--val_dir')
 parser.add_argument('--save_path', default='saved_models')
+parser.add_argument('--save_name', default='model')
 parser.add_argument('--tresnet_unit_size', default='L', choices=['M', 'L', 'XL'], help='TResNet model size')
 parser.add_argument('--model_type', default='tresnet', choices=['basic', 'tresnet'], help='model types')
 parser.add_argument('--model_name', type=str, default='tresnet_l')
@@ -57,7 +59,7 @@ def train_model(model, dataloaders, criterion, optimizer, scheduler, device,  nu
     best_model_wts = copy.deepcopy(model.state_dict())
     best_precision = 0.0
     global_step = 0
-    save_path = args.save_path + '/Tresnet_coco2017.pt'
+    save_path = os.path.join(args.save_path, args.save_name)
     TH = 0.45
 
     for epoch in range(num_epochs):
