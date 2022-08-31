@@ -28,7 +28,8 @@ parser.add_argument('--save_path', default='saved_models')
 parser.add_argument('--tresnet_unit_size', default='L', choices=['M', 'L', 'XL'], help='TResNet model size')
 parser.add_argument('--model_type', default='tresnet', choices=['basic', 'tresnet'], help='model types')
 parser.add_argument('--model_name', type=str, default='tresnet_l')
-parser.add_argument('--num_classes', type=int, default=90)
+parser.add_argument('--wandb_name', default='tresnet')
+parser.add_argument('--num_classes', type=int, default=80)
 parser.add_argument('--input_size', type=int, default=224)
 parser.add_argument('--val_zoom_factor', type=int, default=0.875)
 parser.add_argument('--batch_size', type=int, default=32)
@@ -41,7 +42,7 @@ parser.add_argument('--train_precision', default=16, type=int, help="model preci
 parser.add_argument('--max_epoch', default=300, type=int, help="max number of epochs")
 parser.add_argument('--dataset_sampling_ratio', default=1.0, type=float, help="sampling ratio of dataset")
 parser.add_argument('--seed', default=0, type=int, help="seed for randomness")
-parser.add_argument('--lr', default=1e-3, type=float, help="learning rate")
+parser.add_argument('--lr', default=5e-4, type=float, help="learning rate")
 parser.add_argument('--load_from_path', default=False, type=bool, help='whether to load from an old model statics or not')
 
 
@@ -145,8 +146,8 @@ def main():
     # parsing args
     set_seed(0)
     args = parser.parse_args()
-    wandb.init(project="tresnet_coco2017",
-               name='coco2017')
+    wandb.init(project="tresnet",
+               name=args.wandb_name)
 
     wandb.config = {
 
@@ -154,7 +155,7 @@ def main():
 
         "train_batch_size": args.batch_size,
 
-        "test_batch_size": args.batch_size,
+        "tresnet_unit_size": args.tresnet_unit_size
 
     }
     print('get device')
@@ -174,8 +175,8 @@ def main():
     # tensor_weights = torch.from_numpy(classes_weights)
     # tensor_weights = tensor_weights.to(device, dtype=torch.float)
     criterion = nn.BCEWithLogitsLoss()
-    optimizer = torch.optim.AdamW(model.parameters(), lr=5e-4)
-    step_lr_scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=10, gamma=0.9)
+    optimizer = torch.optim.AdamW(model.parameters(), lr=args.lr)
+    step_lr_scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=15, gamma=0.9)
 
 
 # actual validation process
