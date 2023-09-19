@@ -1,12 +1,11 @@
 import torch
-from src.helper_functions.helper_functions import validate, create_dataloader
 from src.models import create_model
 import argparse
 import torch.nn as nn
 import time
 from datetime import datetime
 import copy
-import torch.nn.functional as F
+import numpy as np
 import tqdm
 from src.models.utils.score_utils import Statistics, compute_scores, compute_scores_and_th
 from src.models.utils.dataset_utils import get_dataloaders
@@ -58,6 +57,7 @@ def train_model(model, dataloaders, criterion, optimizer, scheduler, device,  nu
     since = time.time()
     best_model_wts = copy.deepcopy(model.state_dict())
     best_precision = 0.0
+
     global_step = 0
     save_path = os.path.join(args.save_path, args.save_name)
     TH = 0.45
@@ -83,7 +83,9 @@ def train_model(model, dataloaders, criterion, optimizer, scheduler, device,  nu
             # Iterate over data.
             temp_sigmoid = F.sigmoid
             for inputs, labels in pbar:
+
                 global_step += 1
+
                 inputs = inputs.to(device, dtype=torch.float)
                 labels = labels.to(device, dtype=torch.float)
                 # forward
@@ -91,10 +93,10 @@ def train_model(model, dataloaders, criterion, optimizer, scheduler, device,  nu
                 with torch.set_grad_enabled(phase == 'train'):
                     with torch.cuda.amp.autocast(enabled=(scaler is not None)):
                         predictions = model(inputs)
-                        all_actuals.extend(labels.cpu().tolist())
-                        all_preds.extend(predictions.detach().cpu().tolist())
-                        loss = criterion(predictions, labels)
-                        all_loss.append(loss)
+
+                        pred_loss = criterion(predictions, labels)
+                        loss = pred_loss
+
                         # backward + optimize only if in training phase
                     if phase == 'train':
                         if scaler is not None:
@@ -106,31 +108,24 @@ def train_model(model, dataloaders, criterion, optimizer, scheduler, device,  nu
                             optimizer.step()
                         optimizer.zero_grad()
 
-                    preds = (predictions.detach() >= TH)
-                    # statistics
-                    current_loss = loss.item() * inputs.size(0)
-                    running_loss += current_loss
-                    if phase == 'val':
-                        scores, TH = compute_scores_and_th(preds.cpu(), labels.cpu(), TH)
-                    else:
-                        scores, _ = compute_scores_and_th(preds.cpu(), labels.cpu(), TH)
-                    cum_stats.update(float(current_loss), precision=scores, best_th=TH)
-                    running_step += 1
+                preds = (predictions.detach() >= TH)
+                # statistics
+                current_loss = loss.item() * inputs.size(0)
+                running_loss += current_loss
+                scores = compute_scores(preds.cpu(), labels.cpu())
+                cum_stats.update(float(current_loss), *scores)
 
-                    pbar.set_description(f'phase:{phase}\t L:{cum_stats.loss(): .4f}\t'
-                                         f'A:{cum_stats.precision(): .3f}\t')
+                running_step += 1
 
-                wandb.log({f'{phase}_loss_perstep': (cum_stats.loss()),
-                           f'{phase}_mAP_perstep':(cum_stats.precision()),
-                           'learning_rate': scheduler.get_last_lr()[0]})
-            scores, TH = compute_scores_and_th(all_preds, all_actuals)
-            wandb.log({f'{phase}_loss': (sum(all_loss)/len(all_loss)),
-                       f'{phase}_mAP': (100 * (sum(scores) / len(scores))),
-                       'learning_rate': scheduler.get_last_lr()[0]})
-        if phase == 'val' and (100 * (sum(scores) / len(scores))) > best_precision:
-            best_precision = cum_stats.precision()
-            best_model_wts = copy.deepcopy(model.state_dict())
-            torch.save(model.state_dict(), save_path)
+                pbar.set_description(f'phase:{phase}\t L:{cum_stats.loss(): .4f}\t'
+                                     f'A:{cum_stats.precision(): .3f}\t F1:{cum_stats.f1(): .4f}%')
+
+            if phase == 'val' and cum_stats.precision() > best_precision:
+                best_precision = cum_stats.precision()
+                best_model_wts = copy.deepcopy(model.state_dict())
+                torch.save(model.state_dict(), save_path)
+
+
 
     time_elapsed = time.time() - since
     print('Training complete in {:.0f}m {:.0f}s'.format(

@@ -14,6 +14,7 @@ import torch
 import os
 import tqdm
 from torchvision import transforms
+from pytorch_lightning.core.datamodule import LightningDataModule
 import random
 
 
@@ -21,7 +22,6 @@ class CocoDetection(datasets.coco.CocoDetection):
     def __init__(self, root, annFile, transform=None, target_transform=None):
         self.root = root
         self.coco = COCO(annFile)
-
         self.ids = list(self.coco.imgToAnns.keys())
         self.transform = transform
         self.target_transform = target_transform
@@ -50,23 +50,64 @@ class CocoDetection(datasets.coco.CocoDetection):
         return img, target
 
 
-def get_dataloaders(args):
-    batch_size = args.batch_size
-    workers = args.num_workers
-    num_classes = args.num_classes
-    image_size = args.input_size
+
+def get_weighted_labels(phase='train'):
+    dataloaders, dataset_sizes = get_dataloaders()
+    pbar = tqdm.tqdm(dataloaders[phase], desc=f'phase:{phase}')
+    n_samples = []
+    n = np.zeros(80)
+    for _, labels in pbar:
+        for j in labels:
+            for i in range(len(j)):
+                j_array = np.array(j)
+                n[i] = n[i] + j_array[i]
+    return n
+
+
+def get_dataloaders():
+    batch_size = 128
+    workers = 2
+    num_classes = 80
+    image_size = 224
+
     data = '/home/sara.naserigolestani/hydra-tresnet/data/coco'
     # COCO Data loading
     instances_path_val = os.path.join(data, 'annotations/instances_val2014.json')
     instances_path_train = os.path.join(data, 'annotations/instances_train2014.json')
+    instances_path_test = os.path.join(data, 'test/annotations/image_info_test2014.json')
     data_path_val = f'{data}/val2014'  # args.data
     data_path_train = f'{data}/train2014'  # args.data
-    val_dataset = load_data_from_file(data_path=data_path_val, instances_path=instances_path_val,
-                                      sampling_ratio=args.dataset_sampling_ratio, seed=0, image_size=image_size)
-    train_dataset = load_data_from_file(data_path=data_path_train, instances_path=instances_path_train,
-                                        sampling_ratio=args.dataset_sampling_ratio, seed=0, image_size=image_size)
+
+    data_path_test = f'{data}/test/test2014'
+    val_dataset = CocoDetection(data_path_val,
+                                instances_path_val,
+                                transforms.Compose([
+                                    transforms.Resize((image_size, image_size)),
+                                    transforms.ToTensor(),
+                                    # normalize, # no need, toTensor does normalization
+                                ]))
+
+    train_dataset = CocoDetection(data_path_train,
+                                  instances_path_train,
+                                  transforms.Compose([
+                                      transforms.Resize((image_size, image_size)),
+                                      transforms.ToTensor(),
+                                      # normalize,
+                                  ]))
+
+    test_dataset = CocoDetection(data_path_test,
+                                 instances_path_test,
+                                 transforms.Compose([
+                                     transforms.Resize((image_size, image_size)),
+                                     transforms.ToTensor(),
+                                     # normalize,
+                                 ]))
+
     print("len(val_dataset)): ", len(val_dataset))
     print("len(train_dataset)): ", len(train_dataset))
+    print("len(test_dataset)): ", len(test_dataset))
+
+
 
     # Pytorch Data loader
     train_dl = torch.utils.data.DataLoader(
@@ -76,6 +117,7 @@ def get_dataloaders(args):
     val_dl = torch.utils.data.DataLoader(
         val_dataset, batch_size=batch_size, shuffle=False,
         num_workers=workers, pin_memory=False, drop_last=True)
+
     dataloaders = {'train': train_dl, 'val': val_dl}
     dataset_sizes = {'train': len(train_dataset), 'val': len(val_dataset)}
 
@@ -127,5 +169,71 @@ def get_weighted_labels(phase='train'):
 
 
 
+    test_dl = torch.utils.data.DataLoader(
+        test_dataset, batch_size=batch_size, shuffle=False,
+        num_workers=workers, pin_memory=False, drop_last=True)
+    dataloaders = {'train': train_dl, 'val': val_dl, 'test': test_dl}
+    dataset_sizes = {'train': len(train_dataset), 'val': len(val_dataset), 'test' : len(test_dataset)}
+
+    return dataloaders, dataset_sizes
 
 
+class COCODatasetLightning(LightningDataModule):
+    def __init__(self, args):
+        super().__init__()
+        self.workers = 2
+        self.num_classes = 80
+        self.image_size = args.input_size
+        self.data_path = '/home/sara.naserigolestani/hydra-tresnet/data/coco'
+        self.batch_size = args.batch_size
+
+        instances_path_val = os.path.join(self.data_path, 'annotations/instances_val2014.json')
+        instances_path_train = os.path.join(self.data_path, 'annotations/instances_train2014.json')
+        data_path_val = f'{self.data_path}/val2014'  # args.data
+        data_path_train = f'{self.data_path}/train2014'  # args.data
+        self.train_dataset = self.load_data_from_file(data_path=data_path_train, instances_path=instances_path_train,
+                                                      sampling_ratio=args.dataset_sampling_ratio, seed=args.seed)
+        self.val_dataset = self.load_data_from_file(data_path=data_path_val, instances_path=instances_path_val,
+                                                    sampling_ratio=args.dataset_sampling_ratio, seed=args.seed)
+
+    def prepare_data(self):
+        pass
+
+    def train_dataloader(self):
+        train_dl = torch.utils.data.DataLoader(
+            self.train_dataset, batch_size=self.batch_size, shuffle=True,
+            pin_memory=True, drop_last=True)
+        return train_dl
+
+    def val_dataloader(self):
+        val_dl = torch.utils.data.DataLoader(
+            self.val_dataset, batch_size=self.batch_size,
+            pin_memory=True, drop_last=True)
+        return val_dl
+
+    def load_data_from_file(self, data_path, instances_path, sampling_ratio=1.0, seed=0):
+        if sampling_ratio == 1.0:
+            print(f'loading the whole dataset from: {data_path}')
+            return CocoDetection(data_path,
+                                 instances_path,
+                                 transforms.Compose([
+                                     transforms.Resize((self.image_size, self.image_size)),
+                                     transforms.ToTensor(),
+                                     # normalize,
+                                 ]))
+        else:
+            print(f'loading a subset(%{sampling_ratio * 100}) of dataset from: {data_path}')
+            whole_set = CocoDetection(data_path,
+                                      instances_path,
+                                      transforms.Compose([
+                                          transforms.Resize((self.image_size, self.image_size)),
+                                          transforms.ToTensor(),
+                                          # normalize,
+                                      ]))
+            subset_size = int(len(whole_set) * sampling_ratio)
+            random.seed(seed)
+            subset_indices = random.sample(list(range(len(whole_set))), subset_size)
+            subset = torch.utils.data.Subset(whole_set, subset_indices)
+            print(f'subset size: {len(subset)}')
+
+            return subset

@@ -18,7 +18,7 @@ class AntiAliasDownsampleLayer(nn.Module):
         return self.op(x)
 
 
-@torch.jit.script
+# @torch.jit.script
 class DownsampleJIT(object):
     def __init__(self, filt_size: int = 3, stride: int = 2, channels: int = 0):
         self.stride = stride
@@ -31,7 +31,7 @@ class DownsampleJIT(object):
 
         filt = (a[:, None] * a[None, :]).clone().detach()
         filt = filt / torch.sum(filt)
-        self.filt = filt[None, None, :, :].repeat((self.channels, 1, 1, 1)).cuda().half()
+        self.filt = filt[None, None, :, :].repeat((self.channels, 1, 1, 1)).half()
 
     def __call__(self, input: torch.Tensor):
         if input.dtype != self.filt.dtype:
